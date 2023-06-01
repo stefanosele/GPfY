@@ -1,0 +1,56 @@
+[build-system]
+requires = [
+    "setuptools>=64.0.0",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shgp"
+version = "0.0.1"
+authors = [
+    {name = "Stefanos Eleftheriadis", email = "stelefth@gmail.com"},
+]
+description="Gaussian process with spherical harmonic features in JAX"
+readme = "README.md"
+requires-python = ">=3.8,<=3.11"
+keywords = ["gaussian process", "spherical harmonics", "jax"]
+license = {text = "Apache-2.0"}
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.8"
+]
+dynamic = [
+    "dependencies",
+    "optional-dependencies"
+]
+
+[tool.setuptools.dynamic]
+dependencies = {file = "requirements.txt"}
+optional-dependencies.dev = {file = "test_requirements.txt"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests*"]
+
+[tool.mypy]
+files = "trieste,tests,notebooks/**/*.py"
+ignore_missing_imports = true
+warn_redundant_casts = true
+strict_optional = false
+allow_redefinition = true
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+include = '\.py$'
+extend-exclude = '\.pct.py$'
+
+[tool.isort]
+profile = "black"
+combine_as_imports = true
+skip_gitignore = true
+skip_glob = [
+    "**/__init__.py",
+]
+ensure_newline_before_comments = true

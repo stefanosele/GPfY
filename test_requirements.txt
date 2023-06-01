@@ -1,0 +1,19 @@
+# For testing and linting
+black
+flake8
+isort>=5.1
+mypy>=0.920
+pytest-cov
+pytest-random-order
+pytest-xdist
+pytest>=3.5.0
+
+# Notebooks and documentation:
+ipykernel
+ipython
+jupyter_client
+jupytext
+nbconvert
+nbformat
+
+matplotlib>=3.7.1
