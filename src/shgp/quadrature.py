@@ -21,9 +21,9 @@ import tensorflow_probability.substrates.jax as tfp
 from jax import Array, random
 from jax.tree_util import tree_leaves, tree_map
 from jaxtyping import ArrayLike, Float, Int
-from spherical import Spherical
 
 from shgp.param import Param, identity
+from shgp.spherical import Spherical
 from shgp.utils import dataclass, field
 
 ActiveDims = Union[slice, list]

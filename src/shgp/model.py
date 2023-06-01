@@ -19,7 +19,6 @@ import jax.numpy as jnp
 import tensorflow_probability.substrates.jax as tfp
 from jax import Array, random
 from jaxtyping import Float
-from spherical import Spherical
 
 from shgp.likelihoods import Likelihood
 from shgp.param import Param
@@ -73,9 +72,9 @@ class GP:
         cond_cov_fun = lambda param, x: cond_cov(param, x) + q.project_variance(
             param, proj_fun(param, x)
         )
-        cond_var_fun = lambda param, x: cond_var(param, x)[
-            ..., None
-        ] + q.project_diag_variance(param, proj_fun(param, x))
+        cond_var_fun = lambda param, x: cond_var(param, x)[..., None] + q.project_diag_variance(
+            param, proj_fun(param, x)
+        )
         conditional_fun = (
             jax.jit(cond_mean_fun),
             jax.jit(cond_cov_fun),
@@ -117,8 +116,6 @@ def elbo(
     X, Y = train_data
     fmu, fvar = m.predict_diag(param, X)
     var_exp = lik.variational_expectations(param, fmu, fvar)(Y)
-    scale = jax.lax.cond(
-        dataset_size > 0, lambda: dataset_size, lambda: jnp.shape(X)[0]
-    )
+    scale = jax.lax.cond(dataset_size > 0, lambda: dataset_size, lambda: jnp.shape(X)[0])
     KL = q.prior_KL(param)
     return scale * jnp.mean(var_exp, -1) - KL

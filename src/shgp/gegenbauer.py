@@ -40,9 +40,7 @@ def gegenbauer2(level: int, alpha: Float[ArrayLike, ""], x: Array):
     ):  # -> Tuple[jax.Array, jax.Array]:
         C_n_minus1, C_n_minus2, n = Cs
         # n = jnp.array(iter_num, dtype=jnp.float64)
-        C_next = (
-            2 * x * (n + alpha - 1) * C_n_minus1 - (n + 2 * alpha - 2) * C_n_minus2
-        ) / n
+        C_next = (2 * x * (n + alpha - 1) * C_n_minus1 - (n + 2 * alpha - 2) * C_n_minus2) / n
         return (C_next, C_n_minus1, n + 1), n
 
     # iters = jnp.arange(2, level + 1).astype(jnp.float64)
@@ -150,13 +148,9 @@ class GegenbauerLookupTable:
         grid_evaluations = jax.vmap(part_gegenbauer)(jnp.arange(self.max_level + 1))
 
         # part_gegenbauer = Partial(gegenbauer, alpha=self.alpha + 1, x=x_grid)
-        part_gegenbauer = (
-            lambda n: 2 * self.alpha * _gegenbauer(n, alpha=self.alpha + 1, x=x_grid)
-        )
+        part_gegenbauer = lambda n: 2 * self.alpha * _gegenbauer(n, alpha=self.alpha + 1, x=x_grid)
         grid_grad_evaluations = jax.vmap(part_gegenbauer)(jnp.arange(self.max_level))
-        grid_grad_evaluations = jnp.stack(
-            [jnp.zeros_like(x_grid), *grid_grad_evaluations]
-        )
+        grid_grad_evaluations = jnp.stack([jnp.zeros_like(x_grid), *grid_grad_evaluations])
         grid_grad_evaluations = grid_grad_evaluations
 
         object.__setattr__(self, "grid_evaluations", grid_evaluations)
@@ -182,9 +176,7 @@ class GegenbauerLookupTable:
         def _gegenbauer_from_lookup_bwd(res, cotangents):
             return (None, res * cotangents)
 
-        _gegenbauer_from_lookup.defvjp(
-            _gegenbauer_from_lookup_fwd, _gegenbauer_from_lookup_bwd
-        )
+        _gegenbauer_from_lookup.defvjp(_gegenbauer_from_lookup_fwd, _gegenbauer_from_lookup_bwd)
 
         return _gegenbauer_from_lookup(level, x)
 
@@ -194,27 +186,19 @@ class GegenbauerLookupTable:
 
 
 @custom_vjp
-def gegenbauer_from_lookup(
-    level: float, grid_eval: Array, grid_grad_eval: Array, x: Array
-):
+def gegenbauer_from_lookup(level: float, grid_eval: Array, grid_grad_eval: Array, x: Array):
     # resolution = grid_eval[jnp.array(level, int)].shape[0]
     # grid = jnp.linspace(-1.0, 1.0, resolution, dtype=jnp.float64)
     # return jnp.interp(x, grid, grid_eval[jnp.array(level, int)])
-    return tfp.math.interp_regular_1d_grid(
-        x, -1.0, 1.0, grid_eval[jnp.array(level, int)]
-    )
+    return tfp.math.interp_regular_1d_grid(x, -1.0, 1.0, grid_eval[jnp.array(level, int)])
 
 
-def gegenbauer_from_lookup_fwd(
-    level: float, grid_eval: Array, grid_grad_eval: Array, x: Array
-):
+def gegenbauer_from_lookup_fwd(level: float, grid_eval: Array, grid_grad_eval: Array, x: Array):
     # resolution = grid_eval[jnp.array(level, int)].shape[0]
     # grid = jnp.linspace(-1.0, 1.0, resolution, dtype=jnp.float64)
     return (
         gegenbauer_from_lookup(level, grid_eval, grid_grad_eval, x),
-        tfp.math.interp_regular_1d_grid(
-            x, -1.0, 1.0, grid_grad_eval[jnp.array(level, int)]
-        )
+        tfp.math.interp_regular_1d_grid(x, -1.0, 1.0, grid_grad_eval[jnp.array(level, int)])
         # jnp.interp(x, grid, grid_grad_eval[jnp.array(level, int)])
     )
 
@@ -244,9 +228,7 @@ def _evaluate2_jvp(primals, tangents):
 @custom_gradient
 def _evaluate3(level: float, grid_eval: Array, grid_grad_eval: Array, x: Array):
     def grad(g):
-        dC_dx = tfp.math.interp_regular_1d_grid(
-            x, -1.0, 1.0, grid_grad_eval[int(level)]
-        )
+        dC_dx = tfp.math.interp_regular_1d_grid(x, -1.0, 1.0, grid_grad_eval[int(level)])
         return (None, None, None, dC_dx * g)
 
     return tfp.math.interp_regular_1d_grid(x, -1.0, 1.0, grid_eval[int(level)]), grad
