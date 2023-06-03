@@ -1,4 +1,4 @@
-# Copyright 2023 Stefanos Eleftheriadis
+# Copyright 2023 Stefanos Eleftheriadis, James Hensman
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,15 +32,11 @@ PRNG = Union[random.PRNGKeyArray, jax.Array]
 
 """The number of Gauss-Hermite points to use for quadrature"""
 DEFAULT_NUM_GAUSS_HERMITE_POINTS = 20
-gh_points, gh_weights = np.polynomial.hermite.hermgauss(
-    DEFAULT_NUM_GAUSS_HERMITE_POINTS
-)
+gh_points, gh_weights = np.polynomial.hermite.hermgauss(DEFAULT_NUM_GAUSS_HERMITE_POINTS)
 
 
 def gauss_hermite_quadrature(
-    fun: Callable[
-        [Float[Array, "N ... D"], Float[Array, "N ... D"]], Float[Array, "N ..."]
-    ],
+    fun: Callable[[Float[Array, "N ... D"], Float[Array, "N ... D"]], Float[Array, "N ..."]],
     mean: Float[Array, "N D"],
     stddev: Float[Array, "N D"],
     *args,

@@ -1,4 +1,4 @@
-# Copyright 2023 Stefanos Eleftheriadis
+# Copyright 2023 Stefanos Eleftheriadis, James Hensman
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ PRNG = Union[random.PRNGKeyArray, jax.Array]
 @dataclass
 class GP:
     kernel: Spherical = field(pytree_node=False)
-    conditional_fun: Tuple[Callable, Callable, Callable] = field(
+    conditional_fun: Tuple[Callable, Callable, Callable, Callable] = field(
         default_factory=tuple, pytree_node=False
     )
     name: str = field(default="GP", pytree_node=False)
@@ -68,40 +68,70 @@ class GP:
         q: VariationalDistribution,
     ) -> "GP":
         proj_fun, cond_cov, cond_var = sh.conditional_fun(self.kernel)
-        cond_mean_fun = lambda param, x: q.project_mean(param, proj_fun(param, x))
-        cond_cov_fun = lambda param, x: cond_cov(param, x) + q.project_variance(
-            param, proj_fun(param, x)
+
+        # cond_var = lambda param, x, proj: self.kernel.K_diag(param, x) - jnp.sum(
+        #     jnp.square(proj), -2
+        # )
+        # cond_cov = lambda param, x, proj: self.kernel.K(param, x) - jnp.matmul(
+        #     proj.swapaxes(-1, -2), proj
+        # )
+
+        cond_mean_fun = lambda param, proj: q.project_mean(param, proj)
+        cond_cov_fun = lambda param, x, proj: cond_cov(param, x, proj) + q.project_variance(
+            param, proj
         )
-        cond_var_fun = lambda param, x: cond_var(param, x)[..., None] + q.project_diag_variance(
-            param, proj_fun(param, x)
-        )
+        cond_var_fun = lambda param, x, proj: cond_var(param, x, proj)[
+            ..., None
+        ] + q.project_diag_variance(param, proj)
         conditional_fun = (
-            jax.jit(cond_mean_fun),
-            jax.jit(cond_cov_fun),
-            jax.jit(cond_var_fun),
+            (proj_fun),
+            (cond_mean_fun),
+            (cond_cov_fun),
+            (cond_var_fun),
         )
         return GP(self.kernel, conditional_fun)
 
     def mu(self, param: Param) -> Callable[[Float[Array, "N D"]], Float[Array, "N D"]]:
         if self.conditional_fun:
-            return lambda x: self.conditional_fun[0](param, x)
+            proj_fun, cond_mean_fun, _, __ = self.conditional_fun
+            return lambda x: cond_mean_fun(param, proj_fun(param, x))
         return lambda x: jnp.zeros_like(x, dtype=jnp.float64)
 
     def var(self, param: Param) -> Callable[[Float[Array, "N D"]], Float[Array, "N"]]:
         if self.conditional_fun:
-            return lambda x: self.conditional_fun[2](param, x)
+            proj_fun, cond_mean_fun, _, cond_var_fun = self.conditional_fun
+            return lambda x: cond_var_fun(param, x, proj_fun(param, x))
         return lambda x: self.kernel.K_diag(param, x)
 
     def cov(self, param: Param) -> Callable[[Float[Array, "N D"]], Float[Array, "N N"]]:
         if self.conditional_fun:
-            return lambda x: self.conditional_fun[1](param, x)
+            proj_fun, cond_mean_fun, cond_cov_fun, _ = self.conditional_fun
+            return lambda x: cond_cov_fun(param, x, proj_fun(param, x))
         return lambda x: self.kernel.K(param, x)
 
     def predict_diag(self, param: Param, X: Float[Array, "N D"]):
-        return self.mu(param)(X), self.var(param)(X)
+        if self.conditional_fun:
+            proj_fun, cond_mean_fun, _, cond_var_fun = self.conditional_fun
+
+            proj = proj_fun(param, X)
+            mu = cond_mean_fun(param, proj)
+            var = cond_var_fun(param, X, proj)
+        else:
+            mu = jnp.zeros_like(X, dtype=jnp.float64)
+            var = self.kernel.K_diag(param, X)
+        return mu, var
 
     def predict(self, param: Param, X: Float[Array, "N D"]):
-        return self.mu(param)(X), self.cov(param)(X)
+        if self.conditional_fun:
+            proj_fun, cond_mean_fun, cond_cov_fun, _ = self.conditional_fun
+
+            proj = proj_fun(param, X)
+            mu = cond_mean_fun(param, proj)
+            var = cond_cov_fun(param, X, proj)
+        else:
+            mu = jnp.zeros_like(X, dtype=jnp.float64)
+            var = self.kernel.K(param, X)
+        return mu, var
 
 
 @jax.jit

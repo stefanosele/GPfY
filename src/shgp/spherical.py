@@ -1,4 +1,4 @@
-# Copyright 2023 Stefanos Eleftheriadis
+# Copyright 2023 Stefanos Eleftheriadis, James Hensman
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,17 +42,13 @@ def _slice_or_list(value: Optional[ActiveDims] = None):
 class Spherical:
     order: int = field(default=1, pytree_node=False)
     ard: bool = field(default=True, pytree_node=False)
-    active_dims: Optional[ActiveDims] = field(
-        default_factory=_slice_or_list, pytree_node=False
-    )
+    active_dims: Optional[ActiveDims] = field(default_factory=_slice_or_list, pytree_node=False)
     name: str = field(default="Spherical", pytree_node=False)
 
     def __init_subclass__(cls):
         dataclass(cls)  # pytype: disable=wrong-arg-types
 
-    def init(
-        self, key: PRNG, input_dim: int, projection_dim: Optional[int] = None
-    ) -> Param:
+    def init(self, key: PRNG, input_dim: int, projection_dim: Optional[int] = None) -> Param:
         bias_variance = jnp.array(1.0, dtype=jnp.float64)
         variance = jnp.array(1.0, dtype=jnp.float64)
         bijectors = {}
@@ -62,9 +58,7 @@ class Spherical:
             else:
                 weight_variances = jnp.array(1.0, dtype=jnp.float64)
         else:
-            weight_variances = random.normal(
-                key, (input_dim, projection_dim), dtype=jnp.float64
-            )
+            weight_variances = random.normal(key, (input_dim, projection_dim), dtype=jnp.float64)
             bijectors = {"weight_variances": tfp.bijectors.Identity()}
 
         params = {
@@ -120,9 +114,7 @@ class Spherical:
         # part_shape_function = Partial(self.shape_function, param=None)
         dummy_param = Param()
         part_shape_function = lambda x: self.shape_function(dummy_param, x=x)
-        part_funk_hecke = lambda n: funk_hecke_lambda(
-            part_shape_function, n, sphere_dim
-        )
+        part_funk_hecke = lambda n: funk_hecke_lambda(part_shape_function, n, sphere_dim)
         return jax.vmap(part_funk_hecke)(jnp.arange(max_num_eigvals))
 
         # def _from_lookup():
@@ -135,9 +127,7 @@ class Spherical:
 
         # return jax.lax.cond(max_num_eigvals is None, _from_lookup, _compute)
 
-    def eigenvalues(
-        self, param: Param, levels: Int[ArrayLike, "n"]
-    ) -> Float[ArrayLike, "n"]:
+    def eigenvalues(self, param: Param, levels: Int[ArrayLike, "n"]) -> Float[ArrayLike, "n"]:
         if self.name in param.constants and "eigenvalues" in param.constants[self.name]:
             eigval = param.constants[self.name]["eigenvalues"]
             levels = jnp.clip(levels, 0, len(eigval) - 1)
@@ -148,9 +138,7 @@ class Spherical:
             sphere_dim = param.constants["sphere"]["sphere_dim"]
             geg = param.constants["sphere"]["gegenbauer_lookup_table"]
             decay = (1 + n) ** (-beta)
-            const_factor = self._compute_eigvals(
-                sphere_dim, gegenbauer_lookup_table=geg
-            )
+            const_factor = self._compute_eigvals(sphere_dim, gegenbauer_lookup_table=geg)
             eigval = decay * const_factor / jnp.sum(decay)
             levels = jnp.clip(levels, 0, self.truncation_level - 1)
         return eigval[levels]
@@ -182,9 +170,7 @@ class Spherical:
         if order == 0:
             return (jnp.pi - jnp.arccos(u)) / jnp.pi
         elif order == 1:
-            return (
-                u * (jnp.pi - jnp.arccos(u)) + jnp.sqrt(1.0 - jnp.square(u))
-            ) / jnp.pi
+            return (u * (jnp.pi - jnp.arccos(u)) + jnp.sqrt(1.0 - jnp.square(u))) / jnp.pi
         elif order == 2:
             return (
                 (1.0 + 2.0 * jnp.square(u)) / 3 * (jnp.pi - jnp.arccos(u))
@@ -203,16 +189,12 @@ class Spherical:
         if X2 is None:
             X_sphere2 = X_sphere
             rad2 = rad1
-            K = jax.vmap(lambda x: jax.vmap(lambda y: jnp.dot(x, y))(X_sphere2))(
-                X_sphere
-            )
+            K = jax.vmap(lambda x: jax.vmap(lambda y: jnp.dot(x, y))(X_sphere2))(X_sphere)
             i, j = jnp.diag_indices(K.shape[-1])
             K = K.at[..., i, j].set(1.0)
         else:
             X_sphere2, rad2 = self.to_sphere(param, X2)
-            K = jax.vmap(lambda x: jax.vmap(lambda y: jnp.dot(x, y))(X_sphere2))(
-                X_sphere
-            )
+            K = jax.vmap(lambda x: jax.vmap(lambda y: jnp.dot(x, y))(X_sphere2))(X_sphere)
 
         K = self.shape_function(param, K)
         r = jax.vmap(lambda x: jax.vmap(lambda y: jnp.dot(x, y))(rad2))(rad1)
@@ -364,9 +346,7 @@ class PolynomialDecay(Spherical):
         # gegenbauer_lookup_table = gegenbauer_lookup_table or GegenbauerLookupTable()
 
         alpha = (sphere_dim - 2.0) / 2.0
-        geg = lambda n: gegenbauer_lookup_table(
-            n, alpha, jnp.array(1.0, dtype=jnp.float64)
-        )
+        geg = lambda n: gegenbauer_lookup_table(n, alpha, jnp.array(1.0, dtype=jnp.float64))
         C_1 = jax.vmap(geg)(jnp.arange(self.truncation_level))
         n = jnp.arange(self.truncation_level, dtype=jnp.float64)
         return alpha / (n + alpha) / C_1

@@ -1,4 +1,4 @@
-# Copyright 2023 Stefanos Eleftheriadis
+# Copyright 2023 Stefanos Eleftheriadis, James Hensman
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,9 +91,7 @@ class Gaussian(Likelihood):
         self, param: Param, F: Float[Array, "N D"]
     ) -> tfp.distributions.Distribution:
         variance = param.params["likelihood"][self.name]["variance"]
-        return tfp.distributions.Normal(
-            loc=F.astype(jnp.float64), scale=jnp.sqrt(variance)
-        )
+        return tfp.distributions.Normal(loc=F.astype(jnp.float64), scale=jnp.sqrt(variance))
 
     def variational_expectations(
         self, param: Param, Fmu: Float[Array, "N D"], Fvar: Float[Array, "N D"]
@@ -134,7 +132,4 @@ def inv_probit(x: Float[Array, "N D"]) -> Float[Array, "N D"]:
         Float[Array, "N 1"]: The inverse probit of the input vector.
     """
     jitter = 1e-3  # To ensure output is in interval (0, 1).
-    return (
-        0.5 * (1.0 + jax.scipy.special.erf(x / jnp.sqrt(2.0))) * (1 - 2 * jitter)
-        + jitter
-    )
+    return 0.5 * (1.0 + jax.scipy.special.erf(x / jnp.sqrt(2.0))) * (1 - 2 * jitter) + jitter

@@ -1,4 +1,4 @@
-# Copyright 2023 Stefanos Eleftheriadis
+# Copyright 2023 Stefanos Eleftheriadis, James Hensman
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,9 +19,7 @@ import numpy as np
 from jax import Array
 
 
-def fundamental_set_loader(
-    dimension: int, load_dir="fundamental_system"
-) -> Callable[[int], Array]:
+def fundamental_set_loader(dimension: int, load_dir="fundamental_system") -> Callable[[int], Array]:
     load_dir = Path(__file__).parents[0] / ".." / load_dir
     file_name = load_dir / f"fs_{dimension}D.npz"
 
@@ -30,9 +28,7 @@ def fundamental_set_loader(
         with np.load(file_name) as f:
             cache = {k: v for (k, v) in f.items()}
     else:
-        raise ValueError(
-            f"Fundamental system for dimension {dimension} has not been precomputed."
-        )
+        raise ValueError(f"Fundamental system for dimension {dimension} has not been precomputed.")
 
     def load(degree: int) -> Array:
         key = f"degree_{degree}"

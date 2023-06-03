@@ -1,4 +1,4 @@
-# Copyright 2023 Stefanos Eleftheriadis
+# Copyright 2023 Stefanos Eleftheriadis, James Hensman
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,9 +54,7 @@ class SphericalHarmonics:
         sphere_dim = input_dim + 1
         sphere = param.constants.get("sphere") if param else {}
         if sphere and sphere_dim != sphere["sphere_dim"]:
-            raise ValueError(
-                "`param` contains a sphere that is not compatible to `input_dim`."
-            )
+            raise ValueError("`param` contains a sphere that is not compatible to `input_dim`.")
         try:
             fund_set = fundamental_set_loader(sphere_dim)
         except ValueError:
@@ -72,9 +70,7 @@ class SphericalHarmonics:
                 trainables[f"V_{n}"] = False
             else:
                 key, subkey = jax.random.split(key)
-                V = jax.random.normal(
-                    subkey, (min(self.phase_truncation, num_phase), sphere_dim)
-                )
+                V = jax.random.normal(subkey, (min(self.phase_truncation, num_phase), sphere_dim))
                 Vs[f"V_{n}"] = V
                 trainables[f"V_{n}"] = True
 
@@ -133,9 +129,7 @@ class SphericalHarmonics:
 
         if not any(tree_leaves(var_trainables)):
             orth_basis = self.orthogonalise_basis(param)
-            all_constants[collection] = {
-                "inducing_features": {"orthogonal_basis": orth_basis}
-            }
+            all_constants[collection] = {"inducing_features": {"orthogonal_basis": orth_basis}}
             param = param.replace(constants=all_constants)
         return param
 
@@ -192,9 +186,7 @@ class SphericalHarmonics:
         return Ls
 
     @jax.jit
-    def polynomial_expansion(
-        self, param: Param, X: Float[Array, "N D"]
-    ) -> Float[Array, "M N"]:
+    def polynomial_expansion(self, param: Param, X: Float[Array, "N D"]) -> Float[Array, "M N"]:
         print("TRACING")
         alpha = param.constants["sphere"]["alpha"]
         # gegenbauer = param.constants["sphere"]["gegenbauer_lookup_table"]
@@ -224,9 +216,7 @@ class SphericalHarmonics:
         eigs = kernel.eigenvalues(param, self.levels)
         eigs = jnp.split(eigs, self.num_frequencies)
         reps = self.num_phase_in_frequency(param)
-        return jnp.concatenate(
-            jax.tree_util.tree_map(lambda e, r: jnp.ones(r) / e, eigs, reps)
-        )
+        return jnp.concatenate(jax.tree_util.tree_map(lambda e, r: jnp.ones(r) / e, eigs, reps))
 
     def Kuf(self, param, kernel, x):
         x_sphere, rx = kernel.to_sphere(param, x)
@@ -240,13 +230,20 @@ class SphericalHarmonics:
     ) -> Tuple[Callable, Callable, Callable]:
         # ) -> Callable[[Float[Array, "N D"]], Float[Array, "M N"]]:
 
-        project_fun = lambda param, x: jnp.sqrt(1 / self.Kuu(param, kernel))[
-            ..., None
-        ] * self.Kuf(param, kernel, x)
-        conditional_var_fun = lambda param, x: kernel.K_diag(param, x) - jnp.sum(
-            jnp.square(project_fun(param, x)), -2
+        project_fun = lambda param, x: jnp.sqrt(1 / self.Kuu(param, kernel))[..., None] * self.Kuf(
+            param, kernel, x
         )
-        conditional_cov_fun = lambda param, x: kernel.K(param, x) - jnp.matmul(
-            project_fun(param, x).swapaxes(-1, -2), project_fun(param, x)
+        conditional_var_fun = lambda param, x, proj: kernel.K_diag(param, x) - jnp.sum(
+            jnp.square(proj), -2
         )
+        conditional_cov_fun = lambda param, x, proj: kernel.K(param, x) - jnp.matmul(
+            proj.swapaxes(-1, -2), proj
+        )
+
+        # conditional_var_fun = lambda param, x: kernel.K_diag(param, x) - jnp.sum(
+        #     jnp.square(project_fun(param, x)), -2
+        # )
+        # conditional_cov_fun = lambda param, x: kernel.K(param, x) - jnp.matmul(
+        #     project_fun(param, x).swapaxes(-1, -2), project_fun(param, x)
+        # )
         return (project_fun, conditional_cov_fun, conditional_var_fun)

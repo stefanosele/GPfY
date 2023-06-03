@@ -1,4 +1,4 @@
-# Copyright 2023 Stefanos Eleftheriadis
+# Copyright 2023 Stefanos Eleftheriadis, James Hensman
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,17 +91,13 @@ class Param(PyTreeNode):
 
         # initialise the trainable status
         trainables = self._trainables
-        if not trainables or (
-            tree_flatten(trainables)[1] != tree_flatten(self.params)[1]
-        ):
+        if not trainables or (tree_flatten(trainables)[1] != tree_flatten(self.params)[1]):
             trainables = tree_map(lambda _: True, self.params)
             trainables = self._tree_update_from_subtree(trainables, self._trainables)
 
         # same for initialising the bijectors
         bijectors = self._bijectors
-        if not bijectors or (
-            tree_flatten(bijectors)[1] != tree_flatten(self.params)[1]
-        ):
+        if not bijectors or (tree_flatten(bijectors)[1] != tree_flatten(self.params)[1]):
             bijectors = tree_map(lambda _: positive(), self.params)
             bijectors = self._tree_update_from_subtree(bijectors, self._bijectors)
 
@@ -138,18 +134,14 @@ class Param(PyTreeNode):
 
     def unconstrained(self):
         # if self._constrained:
-        unconstrained_params = tree_map(
-            lambda p, t: t.inverse(p), self.params, self._bijectors
-        )
+        unconstrained_params = tree_map(lambda p, t: t.inverse(p), self.params, self._bijectors)
         return self.replace(_constrained=False, params=unconstrained_params)
         # else:
         #     return self
 
     def constrained(self):
         # if not self._constrained:
-        constrained_params = tree_map(
-            lambda p, t: t.forward(p), self.params, self._bijectors
-        )
+        constrained_params = tree_map(lambda p, t: t.forward(p), self.params, self._bijectors)
         return self.replace(_constrained=True, params=constrained_params)
         # else:
         #     return self
