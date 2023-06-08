@@ -6,3 +6,4 @@ scipy
 optax
 jaxtyping>=0.2.15
 tqdm
+datasets
