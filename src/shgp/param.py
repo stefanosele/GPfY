@@ -18,13 +18,11 @@ import jax.numpy as jnp
 import tensorflow_probability.substrates.jax as tfp
 from jax.tree_util import tree_flatten, tree_map
 
+from shgp.typing import BijectorDict, ConstantDict, TrainableDict, VariableDict
 from shgp.utils import PyTreeNode, field
 
 positive = tfp.bijectors.Exp
 identity = tfp.bijectors.Identity
-
-Collection = Dict[str, Any]
-VariableDict = Dict[str, Collection]
 
 
 class Param(PyTreeNode):
@@ -47,9 +45,9 @@ class Param(PyTreeNode):
     """
 
     params: VariableDict = field(default_factory=dict, pytree_node=True)
-    _trainables: VariableDict = field(default_factory=dict, pytree_node=False)
-    _bijectors: VariableDict = field(default_factory=dict, pytree_node=False)
-    constants: VariableDict = field(default_factory=dict, pytree_node=False)
+    _trainables: TrainableDict = field(default_factory=dict, pytree_node=False)
+    _bijectors: BijectorDict = field(default_factory=dict, pytree_node=False)
+    constants: ConstantDict = field(default_factory=dict, pytree_node=False)
     _constrained: bool = field(default=True, pytree_node=False)
 
     def _has_valid_keys(self) -> None:
@@ -87,7 +85,7 @@ class Param(PyTreeNode):
         Returns:
             If `t1` is a subtree of `t2`.
         """
-        if isinstance(t1, dict) and isinstance(t2, dict):
+        if isinstance(t1, Dict) and isinstance(t2, Dict):
             ret = []
             for k1 in t1.keys():
                 if k1 in t2:  # Check if a subtree of t1 has same structure as in t2
@@ -95,7 +93,7 @@ class Param(PyTreeNode):
                 else:
                     return False
             return all(ret)
-        elif isinstance(t2, dict):  # t1 is a leaf but t2 is a tree
+        elif isinstance(t2, Dict):  # t1 is a leaf but t2 is a tree
             return False
         else:  # both t1 and t2 are leaves
             return True
@@ -114,12 +112,12 @@ class Param(PyTreeNode):
         ret = {}
         for k1, v1 in t1.items():
             if k1 in t2:  # k1 needs to be updated
-                if isinstance(v1, dict):  # v1 is a tree so recurse
+                if isinstance(v1, Dict):  # v1 is a tree so recurse
                     ret[k1] = self._tree_update_from_subtree(t1[k1], t2[k1])
                 else:
                     ret[k1] = t2[k1]  # we have a leaf so update the value
             else:
-                if isinstance(v1, dict):  # check if t2 is a subtree of t1 so we need to recurse
+                if isinstance(v1, Dict):  # check if t2 is a subtree of t1 so we need to recurse
                     ret[k1] = self._tree_update_from_subtree(t1[k1], t2)
                 else:
                     ret[k1] = v1  # no update needed

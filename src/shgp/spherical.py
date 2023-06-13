@@ -12,43 +12,92 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, Sequence, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
 import tensorflow_probability.substrates.jax as tfp
-from jax import Array, random
-from jax.experimental import checkify
-from jax.tree_util import Partial
-from jaxtyping import ArrayLike, Float, Int
+from jax import random
+from jaxtyping import Array, Float, Int
 
 from shgp.gegenbauer import GegenbauerLookupTable
 from shgp.harmonics.utils import funk_hecke_lambda
-from shgp.param import Param, positive
+from shgp.param import Param
+from shgp.typing import PRNG, ActiveDims, ConstantDict
 from shgp.utils import dataclass, field
 
-ActiveDims = Union[slice, list]
-PRNG = Union[random.PRNGKeyArray, jax.Array]
 
+def _slice_or_list(value: Optional[ActiveDims] = None) -> Union[ActiveDims, Array]:
+    """
+    Retrun a slice for indexing dimensions of inputs.
 
-def _slice_or_list(value: Optional[ActiveDims] = None):
+    Args:
+        value: The slice to the dimensions we want to index. Defaults to None.
+
+    Returns:
+        The slice.
+    """
     if value is None:
         return slice(None, None, None)
-    if not isinstance(value, slice):
-        return jnp.array(value, dtype=int)
+    if isinstance(value, slice):
+        return value
+    return jnp.array(value, dtype=int)
 
 
 @dataclass
 class Spherical:
+    """
+    Abstract base class for spherical kernels that mimic the behaviour of neural networks.
+
+    Implementations of `ArcCosine`, `NTK` and a custom `PolynomialDecay` kernel of continuous depth.
+
+    Key reference is
+    ::
+        @article{cho2009kernel,
+            title={Kernel Methods for Deep Learning},
+            author={Cho, Youngmin and Saul, Lawrence},
+            journal={Advances in Neural Information Processing Systems},
+            volume={22},
+            year={2009}
+        }
+
+    NOTE: All classess inherting from `Spherical` need to implement the `shape_function(...)`.
+
+    Attributes:
+        order: The order of the spherical kernel that specifies the activation function of the
+            equivalent neural network. The function is a monmial of the specified order.
+            Defaults to 1.
+        ard: Flag to indicate if we want to model separate weights per input dimension.
+            Defaults to True.
+        active_dims: Optional slice to specify the active dimensions for the kernel.
+            Currently, not supported.
+        name: The name for the object. Defautls to `"Spherical"`.
+    """
+
     order: int = field(default=1, pytree_node=False)
     ard: bool = field(default=True, pytree_node=False)
     active_dims: Optional[ActiveDims] = field(default_factory=_slice_or_list, pytree_node=False)
     name: str = field(default="Spherical", pytree_node=False)
 
     def __init_subclass__(cls):
+        """
+        Make sure inherting classes are dataclasses.
+        """
         dataclass(cls)  # pytype: disable=wrong-arg-types
 
     def init(self, key: PRNG, input_dim: int, projection_dim: Optional[int] = None) -> Param:
+        """
+        Initialise the parameters of the kernel and return a `Param` object.
+
+        Args:
+            key: A random key for initialising the weights.
+            input_dim: The input dimension.
+            projection_dim: If specified it denotes a projection of the `input_dim` to
+                `projection_dim`. Defaults to None.
+
+        Returns:
+            The `Param` object with all variables.
+        """
         bias_variance = jnp.array(1.0, dtype=jnp.float64)
         variance = jnp.array(1.0, dtype=jnp.float64)
         bijectors = {}
@@ -66,22 +115,23 @@ class Spherical:
             "bias_variance": bias_variance,
             "variance": variance,
         }
+        # set the collection of the parameters to the name of the kernel.
         collection = self.name
+        # Compute constants regarding the sphere and the spectral properties of the kernel.
         sphere_dim = (projection_dim or input_dim) + 1
         alpha = (sphere_dim - 2.0) / 2.0
-        constants = {}
+        constants: ConstantDict = {}
         constants["sphere"] = {"sphere_dim": sphere_dim, "alpha": alpha}
         constants[self.name] = {}
 
-        # constants["sphere_dim"] = sphere_dim
         if isinstance(self, PolynomialDecay):
+            # parameter to control the decay
             params["beta"] = jnp.array(1.0, dtype=jnp.float64)
-            # alpha = (sphere_dim - 2.) / 2.
             gegenbauer_lookup = GegenbauerLookupTable(self.truncation_level, alpha)
             constants["sphere"]["gegenbauer_lookup_table"] = gegenbauer_lookup
         else:
-            # sphere_dim = (projection_dim or input_dim) + 1
-            eigenvalues = self._compute_eigvals(sphere_dim, max_num_eigvals=50)
+            # Precompute the eigenvalues of the kernel
+            eigenvalues = self._compute_eigvals(sphere_dim, max_num_eigvals=20)
             constants[self.name]["eigenvalues"] = eigenvalues
 
         # The default bijector is positive, so we only need to pass the bijector for the weights
@@ -96,60 +146,88 @@ class Spherical:
         self,
         sphere_dim: int,
         *,
-        max_num_eigvals: Optional[int] = None,
+        max_num_eigvals: int = 20,
         gegenbauer_lookup_table: Optional[GegenbauerLookupTable] = None,
-    ):
-        # checkify.check(
-        #     bool(max_num_eigvals) ^ bool(gegenbauer_lookup_table),
-        #     "One of `max_num_eigvals` and `gegenbauer_lookup_table` should be provided."
-        # )
-        if not isinstance(self, PolynomialDecay) and gegenbauer_lookup_table:
-            raise ValueError("Lookup table is only used with `PolyDecay` kernel.")
-        max_num_eigvals = max_num_eigvals or 50
+    ) -> Float[Array, " N"]:
+        """
+        Compute the eigenvalues of the spherical kernel.
 
-        # _truncation_level = self.__dict__.get("truncation_level", max_num_eigvals)
-        # gegenbauer_lookup_table = gegenbauer_lookup_table or GegenbauerLookupTable()
+        Args:
+            sphere_dim: The dimensionality of the sphere.
+            max_num_eigvals: The maximum number of eigenvalues to precompute. Defaults to None.
+            gegenbauer_lookup_table: A precomputed lookup table to evaluate the Gegenbauer
+                polynomial. Defaults to 20.
 
-        # def _compute():
-        # part_shape_function = Partial(self.shape_function, param=None)
+        Returns:
+            Array with the eigenvalues of the kernel.
+        """
+        # shape function expects a param input arg, but it is not required for ArcCosine and NTK.
         dummy_param = Param()
         part_shape_function = lambda x: self.shape_function(dummy_param, x=x)
         part_funk_hecke = lambda n: funk_hecke_lambda(part_shape_function, n, sphere_dim)
         return jax.vmap(part_funk_hecke)(jnp.arange(max_num_eigvals))
 
-        # def _from_lookup():
-        #     alpha = (sphere_dim - 2.) / 2.
-        #     # gegenbauer_lookup_table: GegenbauerLookupTable  # helps mypy
-        #     geg = lambda n: gegenbauer_lookup_table(n, alpha, jnp.array(1., dtype=jnp.float64))
-        #     C_1 = jax.vmap(geg)(jnp.arange(_truncation_level))
-        #     n = jnp.array(_truncation_level, dtype=jnp.float64)
-        #     return alpha / (n + alpha) / C_1
+    def eigenvalues(self, param: Param, levels: Int[Array, " N"]) -> Float[Array, " N"]:
+        """
+        Get the eigenvalues from the provided `param` object, or return 0s if not precomputed.
 
-        # return jax.lax.cond(max_num_eigvals is None, _from_lookup, _compute)
+        Args:
+            param: A `Param` initialised with the kernel.
+            levels: An array specifying up to which order de we need eigenvalues.
 
-    def eigenvalues(self, param: Param, levels: Int[ArrayLike, "n"]) -> Float[ArrayLike, "n"]:
-        if self.name in param.constants and "eigenvalues" in param.constants[self.name]:
-            eigval = param.constants[self.name]["eigenvalues"]
-            levels = jnp.clip(levels, 0, len(eigval) - 1)
-        else:
-            assert isinstance(self, PolynomialDecay)  # helps mypy
-            n = jnp.arange(self.truncation_level, dtype=jnp.float64)
-            beta = param.params[self.name]["beta"]
-            sphere_dim = param.constants["sphere"]["sphere_dim"]
-            geg = param.constants["sphere"]["gegenbauer_lookup_table"]
-            decay = (1 + n) ** (-beta)
-            const_factor = self._compute_eigvals(sphere_dim, gegenbauer_lookup_table=geg)
-            eigval = decay * const_factor / jnp.sum(decay)
-            levels = jnp.clip(levels, 0, self.truncation_level - 1)
+        Returns:
+            The eigenvalues.
+        """
+        zeros = jnp.zeros((len(levels),), dtype=jnp.float64)
+        eigval = param.constants.get(self.name, {}).get("eigenvalues", zeros)
         return eigval[levels]
 
-    def _scale_X(self, param: Param, X: Float[ArrayLike, "N D"]):
+        # if self.name in param.constants and "eigenvalues" in param.constants[self.name]:
+        #     # The kernel is initalised and we have already precomputed the eigenvalues
+        #     eigval = param.constants[self.name]["eigenvalues"]
+        #     levels = jnp.clip(levels, 0, len(eigval) - 1)
+        # else:
+        #     # we have a PolynomailDecay kernel and we need to compute the eigenvalues on the spot.
+        #     assert isinstance(self, PolynomialDecay)  # helps mypy
+        #     n = jnp.arange(self.truncation_level, dtype=jnp.float64)
+        #     beta = param.params[self.name]["beta"]
+        #     sphere_dim = param.constants["sphere"]["sphere_dim"]
+        #     geg = param.constants["sphere"]["gegenbauer_lookup_table"]
+        #     decay = (1 + n) ** (-beta)
+        #     const_factor = self._compute_eigvals(sphere_dim, gegenbauer_lookup_table=geg)
+        #     eigval = decay * const_factor / jnp.sum(decay)
+        #     levels = jnp.clip(levels, 0, self.truncation_level - 1)
+        # return eigval[levels]
+
+    def _scale_X(self, param: Param, X: Float[Array, "N D"]) -> Float[Array, "N D"]:
+        """
+        Scale the input X by the weights.
+
+        Args:
+            param: The `Param` initialised with the kernel.
+            X: Input Array already projected to the unit sphere.
+
+        Returns:
+            The scaled input.
+        """
         weight_variances = param.params[self.name]["weight_variances"]
         if len(weight_variances.shape) == 2:
             return jnp.matmul(X, weight_variances)
         return X * jnp.sqrt(weight_variances)
 
-    def to_sphere(self, param: Param, X: Float[ArrayLike, "N D"]):
+    def to_sphere(
+        self, param: Param, X: Float[Array, "N D"]
+    ) -> Tuple[Float[Array, "N DSphere"], Float[Array, " N"]]:
+        """
+        Normalise the input X and project it on the unit sphere.
+
+        Args:
+            param: The `Param` initialised with the kernel.
+            X: Input Array.
+
+        Returns:
+            A tuple containing the normalised input and the norm (radius) of the vector.
+        """
         scaled_X = self._scale_X(param, X)
         bias_shape = scaled_X.shape[:-1] + (1,)
         b = param.params[self.name]["bias_variance"]
@@ -158,26 +236,69 @@ class Spherical:
         r = jnp.sqrt(jnp.sum(jnp.square(X_with_bias), axis=-1))
         return X_with_bias / r[..., None], r
 
-    # def shape_function(self, param: Param, x: ArrayLike) -> ArrayLike:
-    def shape_function(self, param: Param, x: Array) -> Array:
+    def shape_function(self, param: Param, x: Float[Array, "N D"]) -> Float[Array, "N D"]:
+        """
+        The shape function that determines the equivalent kernel to a deep network architecture.
+
+        Args:
+            param: The `Param` initialised with the kernel.
+            x: Input Array.
+
+        Raises:
+            NotImplementedError: All derived classes need to implement this method.
+        """
         raise NotImplementedError
 
-    def _squash(self, x: Array):
+    def _squash(self, x: Float[Array, "N D"]) -> Float[Array, "N D"]:
+        """
+        Ensure that the normalised input is squashed between `[-1, 1]`.
+
+        Due to numerical precision the input can be larger than 1, which causes NaNs when evaluating
+        the Gegenbauer polynomial.
+
+        Args:
+            x: Input Array.
+
+        Returns:
+            The squashed input.
+        """
         eps = 1e-15
         return jnp.array((1 - eps) * x, dtype=jnp.float64)
 
-    def kappa(self, u: Array, order: int):
-        if order == 0:
+    def kappa(self, u: Float[Array, " N"], order: int) -> Float[Array, " N"]:
+        """
+        Compute the analytic integral of the angular part for angles with cosine `u`.
+
+        This is essentially the kernel evaluation.
+
+        NOTE: We have only implemented the first 3 orders which correspond to:
+            0 -> step function
+            1 -> ReLU
+            2 -> Similar to elu
+
+        NOTE: It ignores any specified order higher than 2 and clips it back to 2.
+
+        Args:
+            u: The cosine of the angle between normalised vectors on the unit sphere.
+            order: The order of the kernel which determines the equivalent activation function.
+
+        Returns:
+            The shape function evaluated at the specified angles.
+        """
+
+        def _zero_order():
             return (jnp.pi - jnp.arccos(u)) / jnp.pi
-        elif order == 1:
+
+        def _first_order():
             return (u * (jnp.pi - jnp.arccos(u)) + jnp.sqrt(1.0 - jnp.square(u))) / jnp.pi
-        elif order == 2:
+
+        def _second_order():
             return (
                 (1.0 + 2.0 * jnp.square(u)) / 3 * (jnp.pi - jnp.arccos(u))
                 + jnp.sqrt(1.0 - jnp.square(u))
             ) / jnp.pi
-        else:
-            raise NotImplementedError()
+
+        return jax.lax.switch(order, (_zero_order, _first_order, _second_order))
 
     def K2(
         self,
@@ -185,14 +306,30 @@ class Spherical:
         X: Float[Array, "N D"],
         X2: Optional[Float[Array, "M D"]] = None,
     ) -> Float[Array, "N M"]:
+        """
+        Evaluates the covariances element-wise between the all pairs in `X` and `X2`.
+
+        Similar to `self.K` but with python control flow. Probably not jit-able.
+        NOTE: If `X2` is not specified, the method evaluates the covariances between pairs of `X`.
+
+        Args:
+            param: The `Param` initialised with the kernel.
+            X: Input Array.
+            X2: Input Array.
+
+        Returns:
+            The covariance between the specified intpus.
+        """
+        # project inputs
         X_sphere, rad1 = self.to_sphere(param, X)
-        if X2 is None:
+        if X2 is None:  # we compute the covariance between pairs of X, so copy X2 <- X
             X_sphere2 = X_sphere
             rad2 = rad1
             K = jax.vmap(lambda x: jax.vmap(lambda y: jnp.dot(x, y))(X_sphere2))(X_sphere)
             i, j = jnp.diag_indices(K.shape[-1])
-            K = K.at[..., i, j].set(1.0)
-        else:
+            K = K.at[..., i, j].set(1.0)  # make sure diagonal is 1.
+        else:  # proceed as normal and compute covariance between X, X2
+            # project X2 on the sphere
             X_sphere2, rad2 = self.to_sphere(param, X2)
             K = jax.vmap(lambda x: jax.vmap(lambda y: jnp.dot(x, y))(X_sphere2))(X_sphere)
 
@@ -207,6 +344,19 @@ class Spherical:
         X: Float[Array, "N D"],
         X2: Optional[Float[Array, "M D"]] = None,
     ) -> Float[Array, "N M"]:
+        """
+        Evaluates the covariances element-wise between the all pairs in `X` and `X2`.
+
+        NOTE: If `X2` is not specified, the method evaluates the covariances between pairs of `X`.
+
+        Args:
+            param: The `Param` initialised with the kernel.
+            X: Input Array.
+            X2: Input Array.
+
+        Returns:
+            The covariance between the specified intpus.
+        """
         X2 = X if X2 is None else X2
 
         def _k_func(x1, x2):
@@ -220,85 +370,112 @@ class Spherical:
 
         return jax.vmap(lambda x: jax.vmap(lambda y: _k_func(x, y))(X2))(X)
 
-    def K_diag(self, param: Param, X: Float[Array, "N D"]) -> Float[Array, "N"]:
+    def K_diag(self, param: Param, X: Float[Array, "N D"]) -> Float[Array, " N"]:
+        """
+        Evaluates the diagonal of the kernel, i.e., the variances of the input.
+
+        NOTE: We don't need to evaluate the shape function, as the cosine for the diagonal elements
+        is 1 and the shape function is normalised so that `κ(1) = 1`.
+
+        Args:
+            param: The `Param` initialised with the kernel.
+            X: Input Array.
+
+        Returns:
+            The diagonal variances of specified intpus.
+        """
         _, rad = self.to_sphere(param, X)
         variance = param.params[self.name]["variance"]
         return variance * rad ** (2 * self.order)
 
-    def __add__(self, other: "Spherical") -> "Spherical":
-        return Sum(kernels=[self, other])  # type: ignore
+    # def __add__(self, other: "Spherical") -> "Spherical":
+    #     return Sum(kernels=[self, other])  # type: ignore
 
-    def __mul__(self, other: "Spherical") -> "Spherical":
-        return Product(kernels=[self, other])  # type: ignore
-
-
-class Combination(Spherical):
-    kernels: Sequence[Spherical] = field(default_factory=list, pytree_node=False)
-    _reduce_fn: Optional[Callable] = field(default=None, pytree_node=False)
-    name: str = field(default="Combination", pytree_node=False)
-
-    def __post_init__(self):
-        if not all(isinstance(k, Spherical) for k in self.kernels):
-            TypeError("We can only combine Spherical kernels.")
-
-        kernels: Sequence[Spherical] = []
-        # cursors = {self.__class__.__name__: 0}
-        for k in self.kernels:
-            # prefix = k.__class__.__name__
-            # suffix = cursors.get(prefix, 0)
-            # k_name = f"{prefix}_{suffix}"
-            # k = k.replace(name=k_name)
-            # cursors[prefix] = suffix + 1
-
-            if isinstance(k, self.__class__):
-                kernels.extend(k.kernels)
-            else:
-                kernels.append(k)
-
-        object.__setattr__(self, "kernels", kernels)
-        # object.__setattr__(self, "name", f"{self.__class__.__name__}_0")
-
-
-class Sum(Combination):
-    _reduce_fn: Optional[Callable] = field(default=jnp.sum, pytree_node=False)
-    name: str = field(default="Sum", pytree_node=False)
-
-
-class Product(Combination):
-    _reduce_fn: Optional[Callable] = field(default=jnp.prod, pytree_node=False)
-    name: str = field(default="Product", pytree_node=False)
+    # def __mul__(self, other: "Spherical") -> "Spherical":
+    #     return Product(kernels=[self, other])  # type: ignore
 
 
 class ArcCosine(Spherical):
+    """
+    The ArcCosine kernel.
+
+    Attributes:
+        depth: the depth of the equivalent neural network, which corresponds to nested computations
+            of the `shape_function`. Defautls to 1.
+        name: The name of the kernel. Defautls to `"ArcCosine"`.
+
+    Raises:
+        ValueError: if specified order is not in `{0, 1, 2}`.
+
+    Returns:
+        The kernel.
+    """
+
     depth: int = field(default=1, pytree_node=False)
     name: str = field(default="ArcCosine", pytree_node=False)
 
     def __post_init__(self):
+        """
+        Check after the creation of the dataclass if we have provided a valid `order`.
+
+        Raises:
+            ValueError: if specified order is not in `{0, 1, 2}`.
+        """
         if self.order not in {0, 1, 2}:
             raise ValueError("Requested order is not implemented.")
 
-    def shape_function(self, param: Param, x: Array) -> Array:
-        # x = self._squash(x)
+    def shape_function(self, param: Param, x: Float[Array, "N D"]) -> Float[Array, "N D"]:
+        """
+        The shape function that determines the equivalent kernel to a deep network architecture.
 
+        Args:
+            param: The `Param` initialised with the kernel.
+            x: Input Array.
+        """
+        x = self._squash(x)
+
+        # step function for 1 layer
         def step(carry: Array, dummy: Optional[Array] = None) -> Tuple[Array, Array]:
             y = self.kappa(carry, self.order)
             return y, y
 
+        # run scan for going deep.
         y, _ = jax.lax.scan(step, x, xs=None, length=self.depth)
         return y
 
 
 class NTK(Spherical):
+    """
+    The neural tangent kernel.
+
+    Attributes:
+        depth: the depth of the equivalent neural network, which corresponds to nested computations
+            of the `shape_function`. Defautls to 1.
+        name: The name of the kernel. Defautls to `"NTK"`.
+
+    Returns:
+        _description_
+    """
+
     order: int = field(init=False, pytree_node=False)
     depth: int = field(default=1, pytree_node=False)
     name: str = field(default="NTK", pytree_node=False)
 
     def __post_init__(self):
+        """Hard-wire the `order` to be 1."""
         object.__setattr__(self, "order", 1)
 
-    def shape_function(self, param: Param, x: Array) -> Array:
+    def shape_function(self, param: Param, x: Float[Array, "N D"]) -> Float[Array, "N D"]:
+        """
+        The shape function that determines the equivalent kernel to a deep network architecture.
+
+        Args:
+            param: The `Param` initialised with the kernel.
+            x: Input Array.
+        """
         x = self._squash(x)
 
+        # step function for 1 layer
         def step(
             carry: Tuple[Array, Array], dummy: Optional[Array] = None
         ) -> Tuple[Tuple[Array, Array], Array]:
@@ -307,43 +484,59 @@ class NTK(Spherical):
             carry = x, y
             return carry, y
 
+        # run scan for going deep.
         _, y = jax.lax.scan(step, (x, x), xs=None, length=self.depth)
         return y[-1] / (self.depth + 1)
 
 
 class PolynomialDecay(Spherical):
-    truncation_level: int = field(default=10, pytree_node=False)
+    """
+    The polynomial decay kernel which parameterises the decay rate of the eigenvalues.
 
+    The functional form is:
+
+        K(u) = Σₙ n⁻ᵝ Cᵅₙ(u) (n + α) / α,
+
+        where n is the ordinal frequency, α is a constant on the sphere and β the decay rate.
+
+    Attributes:
+        truncation_level: the order at which we truncate the frequencies.
+        name: The name for the object. Defautls to `"PolyDecay"`.
+    """
+
+    truncation_level: int = field(default=10, pytree_node=False)
     order: int = field(init=False, pytree_node=False)
     name: str = field(default="PolyDecay", pytree_node=False)
 
-    # def _compute_eigvals(
-    #         self,
-    #         sphere_dim: int,
-    #         max_num_eigvals: Optional[int] = None,
-    #         gegenbauer_lookup_table: Optional[GegenbauerLookupTable] = None,
-    # ):
-    #     alpha = (sphere_dim - 2.) / 2.
-    #     gegenbauer = lambda n: self.gegenbauer(n, alpha, jnp.array(1., dtype=jnp.float64))
-    #     C_1 = jax.vmap(gegenbauer)(jnp.arange(self.truncation_level))
-    #     n = jnp.array(self.truncation_level, dtype=jnp.float64)
-    #     return alpha / (n + alpha) / C_1
     def _compute_eigvals(
         self,
         sphere_dim: int,
         *,
-        max_num_eigvals: Optional[int] = None,
+        max_num_eigvals: int = 20,
         gegenbauer_lookup_table: Optional[GegenbauerLookupTable] = None,
     ):
-        # checkify.check(
-        #     gegenbauer_lookup_table is None,
-        #     "The `gegenbauer_lookup_table` should be provided."
-        # )
+        """
+        Compute the eigenvalues of the PolynomialDecay kernel.
+
+        Without an initialised parameter we can only compute the constant part of the eigenvalues
+            α / (n + α) / Cᵅₙ(u)
+
+        Args:
+            sphere_dim: The dimensionality of the sphere.
+            max_num_eigvals: The maximum number of eigenvalues to precompute.
+                This is ignored as the kernel uses the `self.truncation_level` instead.
+            gegenbauer_lookup_table: A precomputed lookup table to evaluate the Gegenbauer
+                polynomial. Defaults to None.
+
+        Raises:
+            ValueError: If `gegenbauer_lookup_table` is specified when we don't use a
+                `PolynomialDecay` kernel.
+
+        Returns:
+            Array with the eigenvalues of the kernel.
+        """
         if not gegenbauer_lookup_table:
             raise ValueError("Lookup table should be provided with `PolyDecay` kernel.")
-
-        # _truncation_level = self.__dict__.get("truncation_level", max_num_eigvals)
-        # gegenbauer_lookup_table = gegenbauer_lookup_table or GegenbauerLookupTable()
 
         alpha = (sphere_dim - 2.0) / 2.0
         geg = lambda n: gegenbauer_lookup_table(n, alpha, jnp.array(1.0, dtype=jnp.float64))
@@ -351,11 +544,46 @@ class PolynomialDecay(Spherical):
         n = jnp.arange(self.truncation_level, dtype=jnp.float64)
         return alpha / (n + alpha) / C_1
 
-    def shape_function(self, param: Param, x: Array) -> Array:
-        # x = self._squash(x)
+    def eigenvalues(self, param: Param, levels: Int[Array, " N"]) -> Float[Array, " N"]:
+        """
+        Get the eigenvalues of the PolynomialDecay kernel for the specified levels.
+
+        For the nth frequency we have::
+            λₙ = (n + 1)⁻ᵝ α / (n + α) / Cᵅₙ(1) / Σₘ(m + 1)⁻ᵝ
+
+        NOTE: we clip the provided levels to the `self.truncation_level`.
+
+        Args:
+            param: A `Param` initialised with the kernel.
+            levels: An array specifying up to which order de we need eigenvalues.
+
+        Returns:
+            The eigenvalues.
+        """
+        n = jnp.arange(self.truncation_level, dtype=jnp.float64)
+        beta = param.params[self.name]["beta"]
+        sphere_dim = param.constants["sphere"]["sphere_dim"]
+        geg = param.constants["sphere"]["gegenbauer_lookup_table"]
+        decay = (1 + n) ** (-beta)
+        const_factor = self._compute_eigvals(sphere_dim, gegenbauer_lookup_table=geg)
+        eigval = decay * const_factor / jnp.sum(decay)
+        levels = jnp.clip(levels, 0, self.truncation_level - 1)
+        return eigval[levels]
+
+    def shape_function(self, param: Param, x: Float[Array, "N D"]) -> Float[Array, "N D"]:
+        """
+        The shape function that determines the equivalent kernel to a deep network architecture.
+
+        Args:
+            param: The `Param` initialised with the kernel.
+            x: Input Array.
+
+        Raises:
+            NotImplementedError: All derived classes need to implement this method.
+        """
+        x = self._squash(x)
 
         alpha = param.constants["sphere"]["alpha"]
-        # (param.constants[self.name]["sphere_dim"]- 2.) / 2.
         gegenbauer_lookup = param.constants["sphere"]["gegenbauer_lookup_table"]
         levels = jnp.arange(self.truncation_level)
 
