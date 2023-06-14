@@ -91,7 +91,7 @@ class Spherical:
 
         Args:
             key: A random key for initialising the weights.
-            input_dim: The input dimension.
+            input_dim: The input dimension. We then append an extra dimension for bias.
             projection_dim: If specified it denotes a projection of the `input_dim` to
                 `projection_dim`. Defaults to None.
 
@@ -118,8 +118,10 @@ class Spherical:
         # set the collection of the parameters to the name of the kernel.
         collection = self.name
         # Compute constants regarding the sphere and the spectral properties of the kernel.
-        sphere_dim = (projection_dim or input_dim) + 1
-        alpha = (sphere_dim - 2.0) / 2.0
+        # Add an extra dimension for the bias.
+        sphere_dim = projection_dim or input_dim
+        dim = sphere_dim + 1
+        alpha = (dim - 2.0) / 2.0
         constants: ConstantDict = {}
         constants["sphere"] = {"sphere_dim": sphere_dim, "alpha": alpha}
         constants[self.name] = {}
@@ -161,10 +163,12 @@ class Spherical:
         Returns:
             Array with the eigenvalues of the kernel.
         """
+        # The dim of the inputs
+        dim = sphere_dim + 1
         # shape function expects a param input arg, but it is not required for ArcCosine and NTK.
         dummy_param = Param()
         part_shape_function = lambda x: self.shape_function(dummy_param, x=x)
-        part_funk_hecke = lambda n: funk_hecke_lambda(part_shape_function, n, sphere_dim)
+        part_funk_hecke = lambda n: funk_hecke_lambda(part_shape_function, n, dim)
         return jax.vmap(part_funk_hecke)(jnp.arange(max_num_eigvals))
 
     def eigenvalues(self, param: Param, levels: Int[Array, " N"]) -> Float[Array, " N"]:
@@ -538,7 +542,8 @@ class PolynomialDecay(Spherical):
         if not gegenbauer_lookup_table:
             raise ValueError("Lookup table should be provided with `PolyDecay` kernel.")
 
-        alpha = (sphere_dim - 2.0) / 2.0
+        dim = sphere_dim + 1
+        alpha = (dim - 2.0) / 2.0
         geg = lambda n: gegenbauer_lookup_table(n, alpha, jnp.array(1.0, dtype=jnp.float64))
         C_1 = jax.vmap(geg)(jnp.arange(self.truncation_level))
         n = jnp.arange(self.truncation_level, dtype=jnp.float64)

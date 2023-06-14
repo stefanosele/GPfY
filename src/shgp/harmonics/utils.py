@@ -15,9 +15,8 @@
 from typing import Callable
 
 import jax.numpy as jnp
-from jax import Array
-from jaxtyping import ArrayLike
-from scipy.special import comb, gamma, roots_legendre
+from jaxtyping import Array, Float
+from scipy.special import gamma, roots_legendre
 
 from shgp.gegenbauer import gegenbauer
 
@@ -26,17 +25,47 @@ legendre_x = jnp.array(legendre_x, dtype=jnp.float64)
 legendre_w = jnp.array(legendre_w, dtype=jnp.float64)
 
 
-def weight_func(t: ArrayLike, d: int):
+def weight_func(t: Float[Array, " N"], d: int) -> Float[Array, " N"]:
+    """
+    The function which orthogonalises Gegenbauer polynomials in [-1, 1].
+
+    Args:
+        t: The input to the weight function and the Gegenbauer polynomial.
+        d: The dimensionality of the input on the Sᵈ⁻¹ sphere.
+
+    Returns:
+        The function evaluation at `t`.
+    """
     return (1.0 - jnp.square(t)) ** ((d - 3) / 2)
 
 
-def funk_hecke_lambda(fun: Callable[[Array], Array], n: int, d: int) -> float:
+def funk_hecke_lambda(
+    fn: Callable[[Float[Array, " N"]], Float[Array, " N"]], n: int, d: int
+) -> Float[Array, ""]:
+    """
+    The general Funk-Hecke formula that gives the `n`th eigenvalue of function `fn` on Sᵈ⁻¹.
+
+    It computes the integral::
+        λₙ = ω / Cᵅₙ(1) ∫₋₁¹ f(t) Cᵅₙ(t) (1 - t²)ʳ dt,
+    where::
+        α = ⁽ᵈ⁻²⁾⁄₂, r = α - ¹⁄₂
+    and::
+        ω = |Sᵈ⁻²| / |Sᵈ⁻¹|
+
+    Args:
+        fn: The function which we integrate.
+        n: The order of the eigenvalue
+        d: The dimensionality of the input on the Sᵈ⁻¹ sphere.
+
+    Returns:
+        The nth eigenvalue.
+    """
     alpha = (d - 2.0) / 2.0
     C1 = gegenbauer(n, alpha, jnp.array(1, dtype=jnp.float64))
-    solid_angle = gamma(d / 2) / gamma((d - 1) / 2) / jnp.sqrt(jnp.pi)
+    solid_angle_ratio = gamma(d / 2) / gamma((d - 1) / 2) / jnp.sqrt(jnp.pi)
 
     def integrand(x):
-        return gegenbauer(n, alpha, x) * fun(x) * weight_func(x, d)
+        return gegenbauer(n, alpha, x) * fn(x) * weight_func(x, d)
 
     integral = jnp.sum(legendre_w * integrand(legendre_x))
-    return solid_angle / C1 * integral
+    return solid_angle_ratio / C1 * integral
