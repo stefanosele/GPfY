@@ -12,23 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, Sequence, Tuple, Union
 
-import jax
+# Borrowed and adapted from the excellent implementation of GPflow (and later on of GPJax)
+
+
+from typing import Callable
+
 import jax.numpy as jnp
 import numpy as np
-import tensorflow_probability.substrates.jax as tfp
-from jax import Array, random
-from jax.tree_util import tree_leaves, tree_map
-from jaxtyping import ArrayLike, Float, Int
-
-from shgp.param import Param, identity
-from shgp.spherical import Spherical
-from shgp.utils import dataclass, field
-
-ActiveDims = Union[slice, list]
-PRNG = Union[random.PRNGKeyArray, jax.Array]
-
+from jaxtyping import Array, Float
 
 """The number of Gauss-Hermite points to use for quadrature"""
 DEFAULT_NUM_GAUSS_HERMITE_POINTS = 20
@@ -41,7 +33,7 @@ def gauss_hermite_quadrature(
     stddev: Float[Array, "N D"],
     *args,
     **kwargs,
-) -> Callable[[Float[Array, "N D"]], Float[Array, "N"]]:
+) -> Callable[[Float[Array, "N D"]], Float[Array, " N"]]:
     """
     Compute Gaussian-Hermite quadrature for a given function. The quadrature
     points are adjusted through the supplied mean and variance arrays.

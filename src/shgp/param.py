@@ -222,13 +222,13 @@ class Param(PyTreeNode):
 
     def unconstrained(self) -> "Param":
         """
-        Move the `params` in the (original) unconstrained space.
+        Move the `params` in the unconstrained (optimisation) space to optimise over them.
 
         NOTE: There is the logic to check if it is already unconstrained and return the same object,
         I just need to test it.
 
         Returns:
-            The `Param` with the variables at the unconstrained space (the original space).
+            The `Param` with the variables at the unconstrained space (the optimisation space).
         """
         # if self._constrained:
         unconstrained_params = tree_map(lambda p, t: t.inverse(p), self.params, self._bijectors)
@@ -238,13 +238,13 @@ class Param(PyTreeNode):
 
     def constrained(self) -> "Param":
         """
-        Move the `params` in the constrained (optimisation) space to optimise over them.
+        Move the `params` in the (original) constrained space.
 
         NOTE: There is the logic to check if it is already unconstrained and return the same object,
         I just need to test it.
 
         Returns:
-            The `Param` with the variables at the constrained space (the optimisation space).
+            The `Param` with the variables at the constrained space (the original space).
         """
         # if not self._constrained:
         constrained_params = tree_map(lambda p, t: t.forward(p), self.params, self._bijectors)

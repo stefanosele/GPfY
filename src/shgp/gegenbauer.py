@@ -133,7 +133,7 @@ class GegenbauerLookupTable:
         object.__setattr__(self, "grid_evaluations", grid_evaluations)
         object.__setattr__(self, "grid_grad_evaluations", grid_grad_evaluations)
 
-    def __call__(self, level: int, alpha: Float[Array, ""], x: Array) -> Array:
+    def __call__(self, level: int, alpha: Union[float, Float[Array, ""]], x: Array) -> Array:
         """
         Compute the Gegenbauer polynomial via linear interpolation from the lookup table.
 
