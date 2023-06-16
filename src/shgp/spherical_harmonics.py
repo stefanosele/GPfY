@@ -186,7 +186,6 @@ class SphericalHarmonics:
             )
         all_constants[collection] = {"inducing_features": {"orthogonal_basis": orth_basis}}
         param = param.replace(constants=all_constants)
-        print("DONE INIT SH")
         return param
 
     def Vs(self, param: Param) -> List[Array]:

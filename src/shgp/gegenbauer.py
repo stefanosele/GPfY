@@ -41,8 +41,6 @@ def _gegenbauer(level: int, alpha: Union[float, Float[Array, ""]], x: Array) -> 
     Returns:
         The Gegenbauer polynomial evaluated at `x`.
     """
-    print("TRACING geg")
-
     C_0 = jnp.ones_like(x, dtype=x.dtype)
     C_1 = 2 * alpha * x
 
@@ -75,8 +73,6 @@ def gegenbauer_fwd(level, alpha, x):
     g_fn = lambda: 2 * alpha * _gegenbauer(level - 1, alpha + 1, x)
     grad = jax.lax.cond(level == 0, lambda: jnp.zeros_like(x), g_fn)
     return geg, grad
-    # g = 2 * alpha * _gegenbauer(level - 1, alpha + 1, x)
-    # return (_gegenbauer(level, alpha, x), jnp.where(level == 0, jnp.zeros_like(g), g))
 
 
 # @jax.jit
