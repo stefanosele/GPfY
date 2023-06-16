@@ -133,7 +133,6 @@ class SphericalHarmonics:
         var_params = {"inducing_features": Vs}
         var_trainables = {"inducing_features": trainables}
         var_bijectors = {"inducing_features": bijectors}
-        # constants = {}
 
         # initialise the Gegenbauer lookup table and compute the relevant constatns on the sphere.
         if (
@@ -147,14 +146,6 @@ class SphericalHarmonics:
             sphere["alpha"] = alpha
             geg = GegenbauerLookupTable(self.num_frequencies, alpha)
             sphere["gegenbauer_lookup_table"] = geg
-            # sphere["geg"] = jax.jit(
-            #     lambda n, X: jax.vmap(
-            #         lambda x1: jax.vmap(lambda x2: gegenbauer(n[0], alpha, x2))(x1)
-            #     )(X)
-            # )
-            # sphere["geg"] = jax.jit(
-            #     lambda n, X: jax.vmap(lambda x: gegenbauer(n[0], alpha, x))(X)
-            # )
 
         all_params: VariableDict = {}
         all_trainables: TrainableDict = {}
@@ -195,6 +186,7 @@ class SphericalHarmonics:
             )
         all_constants[collection] = {"inducing_features": {"orthogonal_basis": orth_basis}}
         param = param.replace(constants=all_constants)
+        print("DONE INIT SH")
         return param
 
     def Vs(self, param: Param) -> List[Array]:
@@ -222,21 +214,6 @@ class SphericalHarmonics:
 
         return jax.lax.cond(jnp.isnan(jnp.sum(orth_basis[0])), _normalise, lambda: Vs)
 
-        # # if the basis is pre-computed then no need for normalisation
-        # orth_precomputed = (
-        #     param.constants.get("variational", {})
-        #     .get("inducing_features", {})
-        #     .get("orthogonal_basis", [])
-        # )
-
-        # # if it is not precomputed, then normalise the vecotrs to the sphere.
-        # if not orth_precomputed:
-        #     return tree_map(
-        #         lambda v: v / jnp.sqrt(jnp.sum(jnp.square(v), axis=1, keepdims=True)),
-        #         Vs,
-        #     )
-        # return Vs
-
     def Ls(self, param: Param) -> List[Array]:
         """
         Compute the orthogonalised basis.
@@ -258,10 +235,6 @@ class SphericalHarmonics:
             lambda: self.orthogonalise_basis(param),
             lambda: orth_basis,
         )
-
-        # if not orth_basis:
-        #     orth_basis = self.orthogonalise_basis(param)
-        # return orth_basis
 
     def num_phase_in_frequency(self, param: Param) -> List[int]:
         """
@@ -306,9 +279,7 @@ class SphericalHarmonics:
 
         def _func(v, n, c):
             x = jnp.matmul(v, v.T)
-            # B = c * geg(n, x)
             B = c * gegenbauer(n[0], alpha, x)
-            # B = c * geg2(n[0], alpha, x)
             L = jnp.linalg.cholesky(B + 1e-16 * jnp.eye(B.shape[0], dtype=B.dtype))
             return L
 
@@ -327,17 +298,14 @@ class SphericalHarmonics:
         Returns:
             The harmonics evaluated at the input as a polynomial expansion of the basis.
         """
-        print("TRACING")
         alpha = param.constants["sphere"]["alpha"]
         # gegenbauer = param.constants["sphere"]["gegenbauer_lookup_table"]
-        # geg = param.constants["sphere"]["geg"]
         levels = jnp.split(self.levels, self.num_frequencies)
         const = alpha / (alpha + self.levels.astype(jnp.float64))
         const = jnp.split(const, self.num_frequencies)
 
         def _func(v, n, L):  # , c):
             vxT = jnp.dot(v, X.T)
-            # zonal = geg(n, vxT)
             zonal = gegenbauer(n[0], alpha, vxT)
 
             # vvT = jnp.matmul(v, v.T)
@@ -345,8 +313,7 @@ class SphericalHarmonics:
             # # B = c * geg2(n[0], alpha, vvT)
             # L = jnp.linalg.cholesky(B + 1e-16 * jnp.eye(B.shape[0], dtype=B.dtype))
 
-            # zonal = geg2(n[0], alpha, vxT)
-            harmonic = triangular_solve(L, zonal, left_side=True)
+            harmonic = triangular_solve(L, zonal, left_side=True, lower=True)
             return harmonic
 
         harmonics = tree_map(_func, self.Vs(param), levels, self.Ls(param))  # , const)
