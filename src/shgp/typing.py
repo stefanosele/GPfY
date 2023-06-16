@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, MutableMapping, Sequence, Union
+from typing import Any, MutableMapping, Sequence, Tuple, Union
 
 import jax
-from jaxtyping import Array
+from jaxtyping import Array, Float
 
 PRNG = Union[jax.random.PRNGKeyArray, Array]
 ActiveDims = Union[slice, Sequence[int]]
@@ -24,3 +24,5 @@ VariableDict = MutableMapping[str, Collection]
 BijectorDict = MutableMapping[str, Collection]
 ConstantDict = MutableMapping[str, Collection]
 TrainableDict = MutableMapping[str, Collection]
+
+TrainingData = Tuple[Float[Array, "N Din"], Float[Array, "N Dout"]]

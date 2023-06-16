@@ -143,9 +143,9 @@ class Gaussian(Likelihood):
 
         # initialise the collection
         collection = "likelihood"
-        all_params: VariableDict = {collection: {}}
+        all_params: VariableDict = {}
         all_trainables: TrainableDict = {collection: {}}
-        all_bijectors: BijectorDict = {collection: {}}
+        all_bijectors: BijectorDict = {}
         all_constants: ConstantDict = {}
         constrained = True
 
@@ -158,6 +158,7 @@ class Gaussian(Likelihood):
             constrained = param._constrained
 
         # extend the collection and return a new param
+        all_params[collection], all_bijectors[collection] = {}, {}
         all_params[collection][self.name] = lik_params
         all_bijectors[collection][self.name] = lik_bijectors
         return Param(

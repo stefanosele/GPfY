@@ -80,9 +80,7 @@ class Spherical:
     name: str = field(default="Spherical", pytree_node=False)
 
     def __init_subclass__(cls):
-        """
-        Make sure inherting classes are dataclasses.
-        """
+        """Make sure inherting classes are dataclasses."""
         dataclass(cls)  # pytype: disable=wrong-arg-types
 
     def init(self, key: PRNG, input_dim: int, projection_dim: Optional[int] = None) -> Param:
@@ -169,7 +167,7 @@ class Spherical:
         dummy_param = Param()
         part_shape_function = lambda x: self.shape_function(dummy_param, x=x)
         part_funk_hecke = lambda n: funk_hecke_lambda(part_shape_function, n, dim)
-        return jax.vmap(part_funk_hecke)(jnp.arange(max_num_eigvals))
+        return jax.vmap(part_funk_hecke)(jnp.arange(max_num_eigvals, dtype=jnp.int32))
 
     def eigenvalues(self, param: Param, levels: Int[Array, " N"]) -> Float[Array, " N"]:
         """
@@ -545,7 +543,7 @@ class PolynomialDecay(Spherical):
         dim = sphere_dim + 1
         alpha = (dim - 2.0) / 2.0
         geg = lambda n: gegenbauer_lookup_table(n, alpha, jnp.array(1.0, dtype=jnp.float64))
-        C_1 = jax.vmap(geg)(jnp.arange(self.truncation_level))
+        C_1 = jax.vmap(geg)(jnp.arange(self.truncation_level, dtype=jnp.int32))
         n = jnp.arange(self.truncation_level, dtype=jnp.float64)
         return alpha / (n + alpha) / C_1
 
@@ -590,7 +588,7 @@ class PolynomialDecay(Spherical):
 
         alpha = param.constants["sphere"]["alpha"]
         gegenbauer_lookup = param.constants["sphere"]["gegenbauer_lookup_table"]
-        levels = jnp.arange(self.truncation_level)
+        levels = jnp.arange(self.truncation_level, dtype=jnp.int32)
 
         const_factor = self.eigenvalues(param, levels)
         eigvals = const_factor * (levels.astype(jnp.float64) + alpha) / alpha

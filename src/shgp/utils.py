@@ -1,3 +1,22 @@
+# Copyright 2023 The Flax Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+# This is a copy from the excellent flax.struct.py with minor modifications. Mainly to remove
+# serialization for now
+
+
 import dataclasses
 from typing import TypeVar
 
@@ -90,9 +109,7 @@ def dataclass(clz: _T) -> _T:
 
     def iterate_clz_with_keys(x):
         meta = tuple(getattr(x, name) for name in meta_fields)
-        data = tuple(
-            (jax.tree_util.GetAttrKey(name), getattr(x, name)) for name in data_fields
-        )
+        data = tuple((jax.tree_util.GetAttrKey(name), getattr(x, name)) for name in data_fields)
         return data, meta
 
     def clz_from_iterable(meta, data):
@@ -101,9 +118,7 @@ def dataclass(clz: _T) -> _T:
         kwargs = dict(meta_args + data_args)
         return data_clz(**kwargs)
 
-    jax.tree_util.register_pytree_with_keys(
-        data_clz, iterate_clz_with_keys, clz_from_iterable
-    )
+    jax.tree_util.register_pytree_with_keys(data_clz, iterate_clz_with_keys, clz_from_iterable)
 
     # add a _flax_dataclass flag to distinguish from regular dataclasses
     data_clz._flax_dataclass = True  # type: ignore[attr-defined]
