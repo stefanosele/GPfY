@@ -34,7 +34,7 @@ where = ["src"]
 exclude = ["tests*"]
 
 [tool.mypy]
-files = "trieste,tests,notebooks/**/*.py"
+files = "shgp,tests,notebooks/**/*.py"
 ignore_missing_imports = true
 warn_redundant_casts = true
 strict_optional = false

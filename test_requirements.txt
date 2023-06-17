@@ -17,3 +17,4 @@ nbconvert
 nbformat
 
 matplotlib>=3.7.1
+uci_datasets @ git+https://github.com/treforevans/uci_datasets.git
