@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, MutableMapping, Sequence, Tuple, Union
+from typing import Any, Callable, MutableMapping, Optional, Sequence, Tuple, Union
 
 import jax
 from jaxtyping import Array, Float
+
+from shgp.training import TrainState
 
 PRNG = Union[jax.random.PRNGKeyArray, Array]
 ActiveDims = Union[slice, Sequence[int]]
@@ -26,3 +28,4 @@ ConstantDict = MutableMapping[str, Collection]
 TrainableDict = MutableMapping[str, Collection]
 
 TrainingData = Tuple[Float[Array, "N Din"], Float[Array, "N Dout"]]
+TrainStepFn = Callable[[TrainState, Optional[Array]], Tuple[TrainState, float]]

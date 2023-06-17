@@ -16,13 +16,16 @@ from typing import Callable, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
+import optax
 from jaxtyping import Array, Float
 
 from shgp.likelihoods import Likelihood
 from shgp.param import Param
+from shgp.scan import vscan
 from shgp.spherical import Spherical
 from shgp.spherical_harmonics import SphericalHarmonics
-from shgp.typing import PRNG, TrainingData
+from shgp.training import TrainState
+from shgp.typing import PRNG, TrainStepFn
 from shgp.utils import dataclass, field
 from shgp.variational import VariationalDistribution
 
@@ -255,36 +258,45 @@ class GP:
             var = self.kernel.K(param, X)
         return mu, var
 
+    def fit(
+        self,
+        param: Param,
+        train_step: TrainStepFn,
+        optimizer: optax.GradientTransformation,
+        num_iters: int,
+        progress_bar: bool = True,
+    ):
+        """
+        Optimise the parameters to fit the GP model on the training data.
 
-@jax.jit
-def elbo(
-    param: Param,
-    m: GP,
-    q: VariationalDistribution,
-    lik: Likelihood,
-    train_data: TrainingData,
-    dataset_size: int = -1,
-) -> float:
-    """
-    The variational lower bound for inference in sparse Gaussian process.
+        Args:
+            param: A `Param` initialised with the model.
+            train_step: A training step function that is called inside a loop during optimisation.
+            optimizer: The optimizer to use.
+            num_iters: The number of iterations.
+            progress_bar: Flag to indicate if we want to print a progress bar during optimisation.
+                Defaults to True.
 
-    ELBO = Σ𝔼_q[log𝒩(p(y|f)] - KL[q(u)||p(u)]
+        Returns:
+            A tuple of 3 objects containing the optimised `Param`, the final `TrainingState` and
+            an `Array` containing the value of the negative `elbo` during the optimisation steps.
+        """
+        # Get the unconstrained params
+        param_free = param.unconstrained()
 
-    Args:
-        param: A `Param` initialised with the model.
-        m: The GP model.
-        q: The variational distribution.
-        lik: The likelihood.
-        train_data: A tuple containing the training data.
-        dataset_size: The full dataset size, in case we do minibatchgin. Defaults to -1, for no
-        minibatching inference.
+        # Get the non-trainable params and set the optimizer to zero_grad
+        frozen = jax.tree_map(lambda x: not (x), param_free._trainables)
+        tx = optax.chain(optimizer, optax.masked(optax.set_to_zero(), frozen))
 
-    Returns:
-        The evidence lower bound.
-    """
-    X, Y = train_data
-    fmu, fvar = m.predict_diag(param, X)
-    var_exp = lik.variational_expectations(param, fmu, fvar)(Y)
-    scale = jax.lax.cond(dataset_size > 0, lambda: dataset_size, lambda: jnp.shape(X)[0])
-    KL = q.prior_KL(param)
-    return scale * jnp.mean(var_exp, -1) - KL
+        # initialise a train state with the free parameters and an `apply_fn` that replaces the
+        # VariableDict in the free `Param`.
+        state = TrainState.create(
+            apply_fn=lambda p: param_free.replace(params=p), params=param_free.params, tx=tx
+        )
+
+        scan = vscan if progress_bar else jax.lax.scan
+        state, loss_val = scan(train_step, state, None, num_iters)
+
+        param_new = state.apply_fn(state.params).constrained()
+
+        return param_new, state, loss_val
