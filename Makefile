@@ -1,5 +1,6 @@
 LIB_NAME = shgp
 TESTS_NAME = tests
+NOTEBOOKS_NAME = docs/**/*.py
 LINT_NAMES = src/$(LIB_NAME) $(TESTS_NAME)
 TYPE_NAMES = src/$(LIB_NAME)
 SUCCESS='\033[0;32m'
@@ -21,10 +22,11 @@ format: ## Formats code with `black` and `isort`
 
 check: ## Runs all static checks such as code formatting checks, linting, mypy
 	@echo "\n=== flake8 (linting)===================================="
-	flake8 --statistics --exclude=.ipynb_checkpoints
+	flake8 --statistics
 	@echo "\n=== black (formatting) ================================="
 	black --check --diff $(LINT_NAMES)
 	@echo "\n=== isort (formatting) ================================="
 	isort --check --diff $(LINT_NAMES)
 	@echo "\n=== mypy (static type checking) ========================"
 	mypy $(TYPE_NAMES)
+	mypy $(NOTEBOOKS_NAME)

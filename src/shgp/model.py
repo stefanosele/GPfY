@@ -294,7 +294,7 @@ class GP:
             apply_fn=lambda p: param_free.replace(params=p), params=param_free.params, tx=tx
         )
 
-        scan = vscan if progress_bar else jax.lax.scan
+        scan: Callable = vscan if progress_bar else jax.lax.scan  # type: ignore
         state, loss_val = scan(train_step, state, None, num_iters)
 
         param_new = state.apply_fn(state.params).constrained()

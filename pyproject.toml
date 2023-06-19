@@ -34,11 +34,12 @@ where = ["src"]
 exclude = ["tests*"]
 
 [tool.mypy]
-files = "shgp,tests,notebooks/**/*.py"
+files = "src/shgp,tests,docs/notebooks/**/*.py"
 ignore_missing_imports = true
 warn_redundant_casts = true
 strict_optional = false
 allow_redefinition = true
+follow_imports = "silent"
 
 [tool.black]
 line-length = 100

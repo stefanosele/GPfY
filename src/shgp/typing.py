@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, MutableMapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, MutableMapping, Optional, Sequence, Tuple, Union
 
 import jax
 from jaxtyping import Array, Float
@@ -28,4 +28,5 @@ ConstantDict = MutableMapping[str, Collection]
 TrainableDict = MutableMapping[str, Collection]
 
 TrainingData = Tuple[Float[Array, "N Din"], Float[Array, "N Dout"]]
+TrainingDataDict = Dict[str, Float[Array, "N D"]]
 TrainStepFn = Callable[[TrainState, Optional[Array]], Tuple[TrainState, float]]

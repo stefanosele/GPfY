@@ -15,22 +15,24 @@
 
 # Copied from GPJax
 
-from typing import Any, Callable, Optional, Tuple, TypeVar
+from typing import Any, Callable, Optional, Tuple, TypeVar, Union
 
 import jax
 import jax.numpy as jnp
 import jax.tree_util as jtu
 from jax import lax
 from jax.experimental import host_callback as hcb
-from jaxtyping import Array, Shaped
+from jaxtyping import Array, Bool, Int
 from tqdm.auto import trange
 
 Carry = TypeVar("Carry")
 X = TypeVar("X")
 Y = TypeVar("Y")
+ScalarInt = Union[int, Int[Array, ""]]
+ScalarBool = Union[bool, Bool[Array, ""]]
 
 
-def _callback(cond: bool, func: Callable, *args: Any) -> None:
+def _callback(cond: ScalarBool, func: Callable, *args: Any) -> None:
     r"""Callback a function for a given argument if a condition is true.
 
     Args:
@@ -57,11 +59,11 @@ def vscan(
     init: Carry,
     xs: X,
     length: Optional[int] = None,
-    reverse: Optional[bool] = False,
-    unroll: Optional[int] = 1,
-    log_rate: Optional[int] = 10,
-    log_value: Optional[bool] = True,
-) -> Tuple[Carry, Shaped[Array, "..."]]:  # return type should be Tuple[Carry, Y[Array]]...
+    reverse: bool = False,
+    unroll: int = 1,
+    log_rate: int = 10,
+    log_value: bool = True,
+) -> Tuple[Carry, Y]:  # return type should be Tuple[Carry, Y[Array]]...
     r"""Scan with verbose output.
 
     This is based on code from this
@@ -121,7 +123,7 @@ def vscan(
         """Close the tqdm progress bar."""
         _progress_bar.close()
 
-    def _body_fun(carry: Carry, iter_num_and_x: Tuple[int, X]) -> Tuple[Carry, Y]:
+    def _body_fun(carry: Carry, iter_num_and_x: Tuple[ScalarInt, X]) -> Tuple[Carry, Y]:
         # Unpack iter_num and x.
         iter_num, x = iter_num_and_x
 
@@ -129,10 +131,10 @@ def vscan(
         carry, y = f(carry, x)
 
         # Conditions for iteration number.
-        _is_first: bool = iter_num == 0
-        _is_multiple: bool = (iter_num % log_rate == 0) & (iter_num != _length - _remainder)
-        _is_remainder: bool = iter_num == _length - _remainder
-        _is_last: bool = iter_num == _length - 1
+        _is_first = iter_num == 0
+        _is_multiple = (iter_num % log_rate == 0) & (iter_num != _length - _remainder)
+        _is_remainder = iter_num == _length - _remainder
+        _is_last = iter_num == _length - 1
 
         # Update progress bar, if first of log_rate.
         _callback(_is_first, _set_running, (y, log_rate))

@@ -24,11 +24,11 @@ from shgp.likelihoods import Likelihood
 from shgp.model import GP
 from shgp.param import Param
 from shgp.training import TrainState
-from shgp.typing import TrainingData, TrainStepFn
+from shgp.typing import TrainingData, TrainingDataDict, TrainStepFn
 from shgp.variational import VariationalDistribution
 
 
-def batched_data_generator(dataset: Dataset, batch_size: int) -> Iterator[TrainingData]:
+def batched_data_generator(dataset: Dataset, batch_size: int) -> Iterator[TrainingDataDict]:
     """
     Create a data-generator for minibatching using a HuggingFace Dataset.
 
@@ -40,7 +40,7 @@ def batched_data_generator(dataset: Dataset, batch_size: int) -> Iterator[Traini
         batch_size: The size of the minibatch.
 
     Yields:
-        A `TrainingData` tuple with the size of `batch_size`.
+        A `TrainingDataDict` with the arrays the size of `batch_size`.
     """
 
     def _reset() -> Dataset:
@@ -102,23 +102,24 @@ def create_training_step(
             return new_state, loss_val
 
         return train_step
+    else:
 
-    @jax.jit
-    def train_step(
-        state: TrainState, dummy_input_for_scan: Optional[Array] = None
-    ) -> Tuple[TrainState, float]:
-        X, Y = dataset[x_key], dataset[y_key]
+        @jax.jit
+        def train_step(
+            state: TrainState, dummy_input_for_scan: Optional[Array] = None
+        ) -> Tuple[TrainState, float]:
+            X, Y = dataset[x_key], dataset[y_key]
 
-        def loss_fn(params):
-            free_param = state.apply_fn(params)
-            return -elbo(free_param.constrained(), model, q, lik, (X, Y))
+            def loss_fn(params):
+                free_param = state.apply_fn(params)
+                return -elbo(free_param.constrained(), model, q, lik, (X, Y))
 
-        loss_val, grads = jax.value_and_grad(loss_fn)(state.params)
-        new_state = state.apply_gradients(grads=grads)
+            loss_val, grads = jax.value_and_grad(loss_fn)(state.params)
+            new_state = state.apply_gradients(grads=grads)
 
-        return new_state, loss_val
+            return new_state, loss_val
 
-    return train_step
+        return train_step
 
 
 @jax.jit

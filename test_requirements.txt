@@ -1,4 +1,5 @@
 # For testing and linting
+autoflake
 black
 flake8
 isort>=5.1
