@@ -97,14 +97,14 @@ class GegenbauerLookupTable:
     Attributes:
         max_level: The maximum order of the polynomial up to which we will evaluate on a grid.
         alpha: The hyper-sphere constant given by (d - 2) / 2 for the Sᵈ⁻¹ sphere.
-        grid_resolution: The number of points in the linspace of [-1, 1]. Defautls to `1_000_000`.
+        grid_resolution: The number of points in the linspace of [-1, 1]. Defautls to `100_000`.
         grid_evaluations: The grid evaluation of all orders of the Gegenbauer.
         grid_grad_evaluations: The grid evaluation of all orders of the gradient of Gegenbauer.
     """
 
     max_level: int = field(default_factory=int, pytree_node=False)
     alpha: float = field(default_factory=float, pytree_node=False)
-    grid_resolution: int = field(default=1_000_000, pytree_node=False)
+    grid_resolution: int = field(default=100_000, pytree_node=False)
     grid_evaluations: jax.Array = field(init=False, pytree_node=False)
     grid_grad_evaluations: jax.Array = field(init=False, pytree_node=False)
 

@@ -264,8 +264,7 @@ class Spherical:
         Returns:
             The squashed input.
         """
-        eps = 1e-15
-        return jnp.array((1 - eps) * x, dtype=jnp.float64)
+        return jnp.clip(x, -1.0, 1.0)
 
     def kappa(self, u: Float[Array, " N"], order: int) -> Float[Array, " N"]:
         """
@@ -302,7 +301,7 @@ class Spherical:
 
         return jax.lax.switch(order, (_zero_order, _first_order, _second_order))
 
-    def K2(
+    def K(
         self,
         param: Param,
         X: Float[Array, "N D"],
@@ -311,7 +310,7 @@ class Spherical:
         """
         Evaluates the covariances element-wise between the all pairs in `X` and `X2`.
 
-        Similar to `self.K` but with python control flow. Probably not jit-able.
+        Similar to `self.K2` but with broadcasting instead of vmap.
         NOTE: If `X2` is not specified, the method evaluates the covariances between pairs of `X`.
 
         Args:
@@ -340,7 +339,7 @@ class Spherical:
         variance = param.params[self.name]["variance"]
         return variance * K * (r**self.order)
 
-    def K(
+    def K2(
         self,
         param: Param,
         X: Float[Array, "N D"],
@@ -510,6 +509,10 @@ class PolynomialDecay(Spherical):
     order: int = field(init=False, pytree_node=False)
     name: str = field(default="PolyDecay", pytree_node=False)
 
+    def __post_init__(self):
+        """Hard-wire the `order` to be 1."""
+        object.__setattr__(self, "order", 1)
+
     def _compute_eigvals(
         self,
         sphere_dim: int,
@@ -521,7 +524,7 @@ class PolynomialDecay(Spherical):
         Compute the eigenvalues of the PolynomialDecay kernel.
 
         Without an initialised parameter we can only compute the constant part of the eigenvalues
-            α / (n + α) / Cᵅₙ(u)
+            α / (n + α) / Cᵅₙ(1)
 
         Args:
             sphere_dim: The dimensionality of the sphere.

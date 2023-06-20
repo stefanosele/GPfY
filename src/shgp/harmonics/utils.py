@@ -16,7 +16,7 @@ from typing import Callable
 
 import jax.numpy as jnp
 from jaxtyping import Array, Float
-from scipy.special import gamma, roots_legendre
+from scipy.special import loggamma, roots_legendre
 
 from shgp.gegenbauer import gegenbauer
 
@@ -62,7 +62,7 @@ def funk_hecke_lambda(
     """
     alpha = (d - 2.0) / 2.0
     C1 = gegenbauer(n, alpha, jnp.array(1, dtype=jnp.float64))
-    solid_angle_ratio = gamma(d / 2) / gamma((d - 1) / 2) / jnp.sqrt(jnp.pi)
+    solid_angle_ratio = jnp.exp(loggamma(d / 2) - loggamma((d - 1) / 2)) / jnp.sqrt(jnp.pi)
 
     def integrand(x):
         return gegenbauer(n, alpha, x) * fn(x) * weight_func(x, d)
