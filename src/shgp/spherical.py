@@ -441,8 +441,8 @@ class ArcCosine(Spherical):
             return y, y
 
         # run scan for going deep.
-        y, _ = jax.lax.scan(step, x, xs=None, length=self.depth)
-        return y
+        _, y = jax.lax.scan(step, x, xs=None, length=self.depth)
+        return y[-1]
 
 
 class NTK(Spherical):

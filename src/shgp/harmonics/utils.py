@@ -67,5 +67,5 @@ def funk_hecke_lambda(
     def integrand(x):
         return gegenbauer(n, alpha, x) * fn(x) * weight_func(x, d)
 
-    integral = jnp.sum(legendre_w * integrand(legendre_x))
+    integral = jnp.dot(legendre_w, integrand(legendre_x))
     return solid_angle_ratio / C1 * integral

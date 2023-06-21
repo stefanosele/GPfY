@@ -16,7 +16,7 @@ from typing import Any, Dict, Union
 
 import jax.numpy as jnp
 import tensorflow_probability.substrates.jax as tfp
-from jax.tree_util import tree_flatten, tree_map
+from jax.tree_util import tree_map, tree_structure
 
 from shgp.typing import BijectorDict, ConstantDict, TrainableDict, VariableDict
 from shgp.utils import PyTreeNode, field
@@ -35,8 +35,8 @@ class Param(PyTreeNode):
         _trainables: A dictionary with the same structure as `params` that specifies if a parameter
             is trainable or not. It defaults to `True` for all unspecified parameters.
         _bijectors: A dictionary with the same structure as `params` that specifies the required
-            bijector to transform to the unconstrained space. It defaults to
-            `tfp.bijectors.Identity` for all unspecified parameters.
+            bijector to transform to the unconstrained space. It defaults to a positive
+            `tfp.bijectors.Exp` for all unspecified parameters.
         constants: A dictionary that holds information for additional variables that are considered
             constant during optimisation.
         _constrained: A flag specifying if the parameters are constrained or not.
@@ -76,7 +76,7 @@ class Param(PyTreeNode):
 
     def _is_subtree(self, t1: Union[VariableDict, Any], t2: Union[VariableDict, Any]) -> bool:
         """
-        Check if `t1` is subtree of `t2`.
+        Check if `t1` is subtree of `t2`, strating from the same level.
 
         Args:
             t1: a `VariableDict` pytree or a leaf node
@@ -132,13 +132,16 @@ class Param(PyTreeNode):
 
         # initialise the trainable status to `True` for all unpsecified variables
         trainables = self._trainables
-        if not trainables or (tree_flatten(trainables)[1] != tree_flatten(self.params)[1]):
+        if not trainables or (tree_structure(trainables) != tree_structure(self.params)):
             trainables = tree_map(lambda _: True, self.params)
             trainables = self._tree_update_from_subtree(trainables, self._trainables)
 
         # initialising the bijectors to `positive` for all unpsecified variables
         bijectors = self._bijectors
-        if not bijectors or (tree_flatten(bijectors)[1] != tree_flatten(self.params)[1]):
+        if not bijectors or (
+            tree_structure(bijectors, is_leaf=lambda x: isinstance(x, tfp.bijectors.Bijector))
+            != tree_structure(self.params)
+        ):
             bijectors = tree_map(lambda _: positive(), self.params)
             bijectors = self._tree_update_from_subtree(bijectors, self._bijectors)
 
