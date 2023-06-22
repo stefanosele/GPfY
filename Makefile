@@ -8,7 +8,7 @@ UNAME_S = $(shell uname -s)
 
 
 install:
-	pip install -d '.[dev]'
+	pip install -e '.[dev]'
 
 format: ## Formats code with `black` and `isort`
 	@echo "\n=== Autoflake =============================================="
