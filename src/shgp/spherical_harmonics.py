@@ -127,12 +127,18 @@ class SphericalHarmonics:
                 Vs[f"V_{n}"] = V
                 trainables[f"V_{n}"] = True
 
+        # initialise the orthogonal basis with nans to get the structure
+        orth_basis = tree_leaves(
+            tree_map(lambda x: jnp.nan * jnp.zeros((x.shape[0], x.shape[0]), dtype=x.dtype), Vs)
+        )
+
         # create the collections for the current object.
         bijectors = {k: identity() for k in Vs.keys()}
         collection = "variational"
         var_params = {"inducing_features": Vs}
         var_trainables = {"inducing_features": trainables}
         var_bijectors = {"inducing_features": bijectors}
+        var_constants = {"inducing_features": {"orthogonal_basis": orth_basis}}
 
         # initialise the Gegenbauer lookup table and compute the relevant constatns on the sphere.
         if (
@@ -165,6 +171,7 @@ class SphericalHarmonics:
         all_params[collection] = var_params
         all_bijectors[collection] = var_bijectors
         all_trainables[collection] = var_trainables
+        all_constants[collection] = var_constants
         all_constants["sphere"] = sphere
 
         # create a new Param object.
@@ -177,13 +184,10 @@ class SphericalHarmonics:
         )
 
         # if we don't have any phase_truncation (so no trainable vars), pre-compute and save the
-        # orthogonal basis, otherwise fill it with NaNs.
+        # orthogonal basis, otherwise keep it with NaNs.
         if not any(tree_leaves(var_trainables)):
             orth_basis = self.orthogonalise_basis(param)
-        else:
-            orth_basis = tree_leaves(
-                tree_map(lambda x: jnp.nan * jnp.zeros((x.shape[0], x.shape[0]), dtype=x.dtype), Vs)
-            )
+
         all_constants[collection] = {"inducing_features": {"orthogonal_basis": orth_basis}}
         param = param.replace(constants=all_constants)
         return param
@@ -259,7 +263,6 @@ class SphericalHarmonics:
         """
         return sum(self.num_phase_in_frequency(param))
 
-    @jax.jit
     def orthogonalise_basis(self, param: Param) -> List[Array]:
         """
         Compute the basis from the fundamental set and orthogonalise it via Cholesky decomposition.
@@ -285,7 +288,6 @@ class SphericalHarmonics:
         Ls = tree_map(_func, self.Vs(param), levels, const)
         return Ls
 
-    @jax.jit
     def polynomial_expansion(self, param: Param, X: Float[Array, "N D"]) -> Float[Array, "M N"]:
         """
         Evaluate the polynomial expansion of an input on the sphere given the harmonic basis.

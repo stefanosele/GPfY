@@ -502,12 +502,12 @@ class PolynomialDecay(Spherical):
 
     Attributes:
         truncation_level: the order at which we truncate the frequencies.
-        name: The name for the object. Defautls to `"PolyDecay"`.
+        name: The name for the object. Defautls to `"PolynomialDecay"`.
     """
 
     truncation_level: int = field(default=10, pytree_node=False)
     order: int = field(init=False, pytree_node=False)
-    name: str = field(default="PolyDecay", pytree_node=False)
+    name: str = field(default="PolynomialDecay", pytree_node=False)
 
     def __post_init__(self):
         """Hard-wire the `order` to be 1."""

@@ -9,6 +9,6 @@ key = jr.PRNGKey(42)
 
 
 @pytest.fixture
-def kernel_param():
+def kernel_param_5d():
     k = NTK(depth=3, ard=True)
-    return k.init(key, input_dim=5)
+    return k, k.init(key, input_dim=5)

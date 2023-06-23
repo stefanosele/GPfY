@@ -31,6 +31,7 @@ def test_is_subtree():
     assert dummy._is_subtree({"a": {"b": False}}, {"a": {"b": 1.0, "c": 0.0}})
     assert dummy._is_subtree({"b": False}, {"b": 1.0, "c": 0.0})
     assert dummy._is_subtree({"b": False}, {"b": 1.0})
+    assert not dummy._is_subtree(1.0, {"c": 1.0})
     assert not dummy._is_subtree({"b": False}, {"c": 1.0})
     assert not dummy._is_subtree({"c": False}, {"a": {"b": 1.0}})
 
