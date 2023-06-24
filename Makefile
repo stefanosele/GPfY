@@ -10,6 +10,10 @@ UNAME_S = $(shell uname -s)
 install:
 	pip install -e '.[dev]'
 
+test:
+	@echo "\n=== TESTS =============================================="
+	pytest $(TESTS_NAME) -v --cov=src --cov-report=term-missing
+
 format: ## Formats code with `black` and `isort`
 	@echo "\n=== Autoflake =============================================="
 	autoflake --remove-all-unused-imports --recursive \

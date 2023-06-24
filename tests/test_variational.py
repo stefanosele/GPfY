@@ -4,7 +4,10 @@ import numpy as np
 import pytest
 
 from shgp.spherical_harmonics import SphericalHarmonics
-from shgp.variational import VariationalDistributionFullCovariance, VariationalDistributionTriL
+from shgp.variational import (
+    VariationalDistributionFullCovariance,
+    VariationalDistributionTriL,
+)
 
 key = jr.PRNGKey(42)
 
