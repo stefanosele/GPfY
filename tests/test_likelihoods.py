@@ -17,7 +17,7 @@ import jax.random as jr
 import numpy as np
 import pytest
 
-from shgp.likelihoods import Bernoulli, Gaussian
+from gpfy.likelihoods import Bernoulli, Gaussian
 
 key = jr.PRNGKey(42)
 

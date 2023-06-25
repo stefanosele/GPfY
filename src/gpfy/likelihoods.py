@@ -19,10 +19,10 @@ import jax.numpy as jnp
 import tensorflow_probability.substrates.jax as tfp
 from jaxtyping import Array, Float
 
-from shgp.param import Param, positive
-from shgp.quadrature import gauss_hermite_quadrature
-from shgp.typing import BijectorDict, ConstantDict, TrainableDict, VariableDict
-from shgp.utils import dataclass, field
+from gpfy.param import Param, positive
+from gpfy.quadrature import gauss_hermite_quadrature
+from gpfy.typing import BijectorDict, ConstantDict, TrainableDict, VariableDict
+from gpfy.utils import dataclass, field
 
 
 @dataclass

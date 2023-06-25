@@ -6,7 +6,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "shgp"
+name = "gpfy"
 version = "0.0.1"
 authors = [
     {name = "Stefanos Eleftheriadis", email = "stelefth@gmail.com"},
@@ -34,7 +34,7 @@ where = ["src"]
 exclude = ["tests*"]
 
 [tool.mypy]
-files = "src/shgp,tests,docs/notebooks/**/*.py"
+files = "src/gpfy,tests,docs/notebooks/**/*.py"
 ignore_missing_imports = true
 warn_redundant_casts = true
 strict_optional = false

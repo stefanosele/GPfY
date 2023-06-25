@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 import tensorflow_probability.substrates.jax as tfp
 
-from shgp.param import Param, identity, positive
+from gpfy.param import Param, identity, positive
 
 
 def test_param_raises_with_invalid_tree_structure():

@@ -18,7 +18,7 @@ from typing import Callable, Dict
 
 import optax
 
-from shgp.utils import PyTreeNode, field
+from gpfy.utils import PyTreeNode, field
 
 
 class TrainState(PyTreeNode):

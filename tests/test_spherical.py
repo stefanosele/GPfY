@@ -17,8 +17,8 @@ import jax.random as jr
 import numpy as np
 import pytest
 
-from shgp.param import Param, identity, positive
-from shgp.spherical import NTK, ArcCosine, PolynomialDecay
+from gpfy.param import Param, identity, positive
+from gpfy.spherical import NTK, ArcCosine, PolynomialDecay
 
 key = jr.PRNGKey(42)
 

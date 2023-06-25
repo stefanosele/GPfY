@@ -20,12 +20,12 @@ import jax.numpy as jnp
 from datasets import Dataset
 from jaxtyping import Array
 
-from shgp.likelihoods import Likelihood
-from shgp.model import GP
-from shgp.param import Param
-from shgp.training import TrainState
-from shgp.typing import TrainingData, TrainingDataDict, TrainStepFn
-from shgp.variational import VariationalDistribution
+from gpfy.likelihoods import Likelihood
+from gpfy.model import GP
+from gpfy.param import Param
+from gpfy.training import TrainState
+from gpfy.typing import TrainingData, TrainingDataDict, TrainStepFn
+from gpfy.variational import VariationalDistribution
 
 
 def batched_data_generator(dataset: Dataset, batch_size: int) -> Iterator[TrainingDataDict]:

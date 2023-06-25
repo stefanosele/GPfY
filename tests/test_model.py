@@ -17,11 +17,11 @@ import jax.random as jr
 import numpy as np
 import pytest
 
-from shgp.likelihoods import Gaussian
-from shgp.model import GP
-from shgp.spherical import NTK, PolynomialDecay
-from shgp.spherical_harmonics import SphericalHarmonics
-from shgp.variational import VariationalDistributionTriL
+from gpfy.likelihoods import Gaussian
+from gpfy.model import GP
+from gpfy.spherical import NTK, PolynomialDecay
+from gpfy.spherical_harmonics import SphericalHarmonics
+from gpfy.variational import VariationalDistributionTriL
 
 key = jr.PRNGKey(42)
 

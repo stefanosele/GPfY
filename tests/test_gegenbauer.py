@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 from scipy.special import gegenbauer as sci_gegenbauer
 
-from shgp.gegenbauer import GegenbauerLookupTable, gegenbauer
+from gpfy.gegenbauer import GegenbauerLookupTable, gegenbauer
 
 key = jr.PRNGKey(42)
 

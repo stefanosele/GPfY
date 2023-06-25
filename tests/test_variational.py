@@ -17,8 +17,8 @@ import jax.random as jr
 import numpy as np
 import pytest
 
-from shgp.spherical_harmonics import SphericalHarmonics
-from shgp.variational import (
+from gpfy.spherical_harmonics import SphericalHarmonics
+from gpfy.variational import (
     VariationalDistributionFullCovariance,
     VariationalDistributionTriL,
 )

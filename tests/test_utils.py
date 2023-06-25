@@ -16,8 +16,8 @@ import numpy as np
 import pytest
 from scipy.integrate import quad
 
-from shgp.gegenbauer import gegenbauer
-from shgp.harmonics.utils import weight_func
+from gpfy.gegenbauer import gegenbauer
+from gpfy.harmonics.utils import weight_func
 
 alpha_list = [0.5, 1.5, 3.0, 10.0]
 freq_list = [0, 1, 2, 5, 10]

@@ -21,7 +21,7 @@ from jax import custom_vjp
 from jax.tree_util import Partial
 from jaxtyping import Array, Bool, Float
 
-from shgp.utils import dataclass, field
+from gpfy.utils import dataclass, field
 
 
 @jax.jit

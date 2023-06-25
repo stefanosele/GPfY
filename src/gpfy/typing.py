@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, MutableMapping, Optional, Sequence, Tupl
 import jax
 from jaxtyping import Array, Float
 
-from shgp.training import TrainState
+from gpfy.training import TrainState
 
 PRNG = Union[jax.random.PRNGKeyArray, Array]
 ActiveDims = Union[slice, Sequence[int]]

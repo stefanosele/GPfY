@@ -19,15 +19,15 @@ import jax.numpy as jnp
 import optax
 from jaxtyping import Array, Float
 
-from shgp.likelihoods import Likelihood
-from shgp.param import Param
-from shgp.scan import vscan
-from shgp.spherical import Spherical
-from shgp.spherical_harmonics import SphericalHarmonics
-from shgp.training import TrainState
-from shgp.typing import PRNG, TrainStepFn
-from shgp.utils import dataclass, field
-from shgp.variational import VariationalDistribution
+from gpfy.likelihoods import Likelihood
+from gpfy.param import Param
+from gpfy.scan import vscan
+from gpfy.spherical import Spherical
+from gpfy.spherical_harmonics import SphericalHarmonics
+from gpfy.training import TrainState
+from gpfy.typing import PRNG, TrainStepFn
+from gpfy.utils import dataclass, field
+from gpfy.variational import VariationalDistribution
 
 
 @dataclass

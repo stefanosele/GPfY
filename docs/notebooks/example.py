@@ -5,12 +5,12 @@ import optax
 from datasets import Dataset
 from uci_datasets import Dataset as DatasetUCI
 
-from shgp.likelihoods import Gaussian
-from shgp.model import GP
-from shgp.optimization import create_training_step
-from shgp.spherical import NTK
-from shgp.spherical_harmonics import SphericalHarmonics
-from shgp.variational import VariationalDistributionTriL
+from gpfy.likelihoods import Gaussian
+from gpfy.model import GP
+from gpfy.optimization import create_training_step
+from gpfy.spherical import NTK
+from gpfy.spherical_harmonics import SphericalHarmonics
+from gpfy.variational import VariationalDistributionTriL
 
 key = jax.random.PRNGKey(42)
 

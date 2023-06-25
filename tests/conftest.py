@@ -16,7 +16,7 @@ import jax
 import jax.random as jr
 import pytest
 
-from shgp.spherical import NTK
+from gpfy.spherical import NTK
 
 jax.config.update("jax_enable_x64", True)
 key = jr.PRNGKey(42)

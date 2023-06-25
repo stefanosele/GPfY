@@ -18,8 +18,8 @@ import jax.numpy as jnp
 import tensorflow_probability.substrates.jax as tfp
 from jax.tree_util import tree_map, tree_structure
 
-from shgp.typing import BijectorDict, ConstantDict, TrainableDict, VariableDict
-from shgp.utils import PyTreeNode, field
+from gpfy.typing import BijectorDict, ConstantDict, TrainableDict, VariableDict
+from gpfy.utils import PyTreeNode, field
 
 positive = tfp.bijectors.Exp
 identity = tfp.bijectors.Identity

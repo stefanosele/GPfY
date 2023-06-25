@@ -20,9 +20,9 @@ import tensorflow_probability.substrates.jax as tfp
 from jax.tree_util import tree_leaves, tree_map
 from jaxtyping import Array, Float
 
-from shgp.param import Param, identity
-from shgp.typing import BijectorDict, ConstantDict, TrainableDict, VariableDict
-from shgp.utils import dataclass, field
+from gpfy.param import Param, identity
+from gpfy.typing import BijectorDict, ConstantDict, TrainableDict, VariableDict
+from gpfy.utils import dataclass, field
 
 
 @dataclass

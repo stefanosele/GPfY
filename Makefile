@@ -1,4 +1,4 @@
-LIB_NAME = shgp
+LIB_NAME = gpfy
 TESTS_NAME = tests
 NOTEBOOKS_NAME = docs/**/*.py
 LINT_NAMES = src/$(LIB_NAME) $(TESTS_NAME)

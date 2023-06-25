@@ -18,7 +18,7 @@ import jax.numpy as jnp
 from jaxtyping import Array, Float
 from scipy.special import loggamma, roots_legendre
 
-from shgp.gegenbauer import gegenbauer
+from gpfy.gegenbauer import gegenbauer
 
 legendre_x, legendre_w = roots_legendre(1000)
 legendre_x = jnp.array(legendre_x, dtype=jnp.float64)

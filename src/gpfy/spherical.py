@@ -20,11 +20,11 @@ import tensorflow_probability.substrates.jax as tfp
 from jax import random
 from jaxtyping import Array, Float, Int
 
-from shgp.gegenbauer import GegenbauerLookupTable
-from shgp.harmonics.utils import funk_hecke_lambda
-from shgp.param import Param
-from shgp.typing import PRNG, ActiveDims, ConstantDict
-from shgp.utils import dataclass, field
+from gpfy.gegenbauer import GegenbauerLookupTable
+from gpfy.harmonics.utils import funk_hecke_lambda
+from gpfy.param import Param
+from gpfy.typing import PRNG, ActiveDims, ConstantDict
+from gpfy.utils import dataclass, field
 
 
 def _slice_or_list(value: Optional[ActiveDims] = None) -> Union[ActiveDims, Array]:

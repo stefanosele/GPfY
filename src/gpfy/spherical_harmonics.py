@@ -21,12 +21,12 @@ from jax.tree_util import tree_leaves, tree_map
 from jaxtyping import Array, Float
 from scipy.special import comb
 
-from shgp.gegenbauer import GegenbauerLookupTable, gegenbauer
-from shgp.harmonics.fund_set import fundamental_set_loader
-from shgp.param import Param, identity
-from shgp.spherical import Spherical
-from shgp.typing import PRNG, BijectorDict, ConstantDict, TrainableDict, VariableDict
-from shgp.utils import dataclass, field
+from gpfy.gegenbauer import GegenbauerLookupTable, gegenbauer
+from gpfy.harmonics.fund_set import fundamental_set_loader
+from gpfy.param import Param, identity
+from gpfy.spherical import Spherical
+from gpfy.typing import PRNG, BijectorDict, ConstantDict, TrainableDict, VariableDict
+from gpfy.utils import dataclass, field
 
 
 def _num_harmonics(dim: int, frequency: int) -> int:

@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 from jax.tree_util import tree_leaves, tree_map
 
-from shgp.spherical_harmonics import SphericalHarmonics, _num_harmonics
+from gpfy.spherical_harmonics import SphericalHarmonics, _num_harmonics
 
 key = jr.PRNGKey(42)
 
