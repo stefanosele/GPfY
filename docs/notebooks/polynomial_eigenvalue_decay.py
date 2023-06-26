@@ -13,8 +13,10 @@
 # decay rate for certain shape functions.
 
 # %% [markdown]
-# In this notebook we look into our `PolynomialDecay` kernel and compare the eigenvalue deacy to the
+# In this notebook we look into our `PolynomialDecay` kernel and compare the eigenvalue decay to the
 # classic `NTK` kernel.
+
+from typing import Dict, List
 
 import jax
 import jax.numpy as jnp
@@ -26,8 +28,8 @@ from gpfy.spherical import NTK, PolynomialDecay
 
 # %%
 key = jax.random.PRNGKey(0)
-eigvals_ntk = {}
-eigvals_poly = {}
+eigvals_ntk: Dict[int, List[int]] = {}
+eigvals_poly: Dict[int, List[int]] = {}
 dims = [3, 10]
 depth = [5, 10, 50, 100]
 beta = [2.0, 1.0, 0.1, 0.01]
