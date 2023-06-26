@@ -83,7 +83,13 @@ class Spherical:
         """Make sure inherting classes are dataclasses."""
         dataclass(cls)  # pytype: disable=wrong-arg-types
 
-    def init(self, key: PRNG, input_dim: int, projection_dim: Optional[int] = None) -> Param:
+    def init(
+        self,
+        key: PRNG,
+        input_dim: int,
+        projection_dim: Optional[int] = None,
+        max_num_eigvals: Optional[int] = None,
+    ) -> Param:
         """
         Initialise the parameters of the kernel and return a `Param` object.
 
@@ -92,6 +98,8 @@ class Spherical:
             input_dim: The input dimension. We then append an extra dimension for bias.
             projection_dim: If specified it denotes a projection of the `input_dim` to
                 `projection_dim`. Defaults to None.
+            max_num_eigvals: If specified it denotes the higher order of frequency up to which we
+                compute the eigenvalues. Defaults to None.
 
         Returns:
             The `Param` object with all variables.
@@ -131,7 +139,7 @@ class Spherical:
             constants["sphere"]["gegenbauer_lookup_table"] = gegenbauer_lookup
         else:
             # Precompute the eigenvalues of the kernel
-            eigenvalues = self._compute_eigvals(sphere_dim, max_num_eigvals=20)
+            eigenvalues = self._compute_eigvals(sphere_dim, max_num_eigvals=max_num_eigvals)
             constants[self.name]["eigenvalues"] = eigenvalues
 
         # The default bijector is positive, so we only need to pass the bijector for the weights
@@ -146,7 +154,7 @@ class Spherical:
         self,
         sphere_dim: int,
         *,
-        max_num_eigvals: int = 20,
+        max_num_eigvals: Optional[int] = None,
         gegenbauer_lookup_table: Optional[GegenbauerLookupTable] = None,
     ) -> Float[Array, " N"]:
         """
@@ -154,13 +162,15 @@ class Spherical:
 
         Args:
             sphere_dim: The dimensionality of the sphere.
-            max_num_eigvals: The maximum number of eigenvalues to precompute. Defaults to None.
+            max_num_eigvals: The maximum number of eigenvalues to precompute. Defaults to None,
+                which will compute eigenvalues up to the 20th frequency.
             gegenbauer_lookup_table: A precomputed lookup table to evaluate the Gegenbauer
-                polynomial. Defaults to 20.
+                polynomial. Defaults to None.
 
         Returns:
             Array with the eigenvalues of the kernel.
         """
+        max_num_eigvals = max_num_eigvals or 20
         # The dim of the inputs
         dim = sphere_dim + 1
         # shape function expects a param input arg, but it is not required for ArcCosine and NTK.
@@ -517,7 +527,7 @@ class PolynomialDecay(Spherical):
         self,
         sphere_dim: int,
         *,
-        max_num_eigvals: int = 20,
+        max_num_eigvals: Optional[int] = None,
         gegenbauer_lookup_table: Optional[GegenbauerLookupTable] = None,
     ):
         """

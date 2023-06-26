@@ -13,6 +13,7 @@ pytest>=3.5.0
 ipykernel
 ipython
 jupyter_client
+notebook
 jupytext
 nbconvert
 nbformat
