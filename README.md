@@ -2,7 +2,7 @@
 
 A lightweight library in JAX for Gaussian process with spherical kernels and sparse spherical harmonic inducing features.
 
-$GP \mathcal{f} Y_\ell^m$ is based on the simple [flax.struct](https://github.com/google/flax/blob/main/flax/struct.py) dataclass. It implements [(Eleftheriadis et al. 2023)](https://arxiv.org/abs/2303.15948), which revisits the Sparse Gaussian Process with Spherical Harmonic features from [Dutordoir et al.](http://proceedings.mlr.press/v119/dutordoir20a.html), and introduces:
+$GP \mathcal{f} Y_\ell^m$ is based on the simple [flax.struct](https://github.com/google/flax/blob/main/flax/struct.py) dataclass. It implements [(Eleftheriadis et al. 2023)](https://arxiv.org/abs/2303.15948), which revisits the Sparse Gaussian Process with Spherical Harmonic features from [Dutordoir et al. 2020](http://proceedings.mlr.press/v119/dutordoir20a.html), and introduces:
 
 1. `PolynomialDecay` kernel with "continuous" depth.
 2. Sparse orthogonal basis derived from `SphericalHarmonics` features with phase truncation.
