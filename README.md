@@ -20,7 +20,7 @@ Alternatively, you can install the latest GitHub `develop` version.
 First create a virtual enviroment via conda:
 ```bash
 conda create -n gpfy_env python=3.10.0
-conda activate gpjax_env
+conda activate gpfy_env
 ```
 
 Then clone a copy of the repository to your local machine and run the setup configuration in development mode:
