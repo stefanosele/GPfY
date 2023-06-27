@@ -27,7 +27,7 @@ Then clone a copy of the repository to your local machine and run the setup conf
 ```bash
 git clone https://github.com/stefanosele/GPfY.git
 cd GPfY
-make intall
+make install
 ```
 This will automatically install all required dependencies.
 
