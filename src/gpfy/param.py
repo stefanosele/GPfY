@@ -173,7 +173,7 @@ class Param(PyTreeNode):
         # first update the subtree within the specified collection
         updates = self._tree_update_from_subtree(self.params[collection], kwargs)
         # then update the params with the newly updated collection
-        updates = self._tree_update_from_subtree(self.params, updates)
+        updates = self._tree_update_from_subtree(self.params, {collection: updates})
         return self.replace(params=updates)
 
     def set_trainable(self, collection: str, **kwargs) -> "Param":
@@ -197,7 +197,7 @@ class Param(PyTreeNode):
         # first update the subtree within the specified collection
         updates = self._tree_update_from_subtree(self._trainables[collection], kwargs)
         # then update the trainables with the newly updated collection
-        updates = self._tree_update_from_subtree(self._trainables, updates)
+        updates = self._tree_update_from_subtree(self._trainables, {collection: updates})
         return self.replace(_trainables=updates)
 
     def set_bijector(self, collection: str, **kwargs):
@@ -220,7 +220,7 @@ class Param(PyTreeNode):
         # first update the subtree within the specified collection
         updates = self._tree_update_from_subtree(self._bijectors[collection], kwargs)
         # then update the bijectors with the newly updated collection
-        updates = self._tree_update_from_subtree(self._bijectors, updates)
+        updates = self._tree_update_from_subtree(self._bijectors, {collection: updates})
         return self.replace(_bijectors=updates)
 
     def unconstrained(self) -> "Param":

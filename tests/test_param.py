@@ -70,11 +70,12 @@ def test_param_construction_can_correctly_fill_the_dictionaries():
 
 def test_replace_param():
     """Test we can replace the params."""
-    param = Param(params={"collection_a": {"a": 0.0, "b": 1.0}, "collection_b": {"c": 2.0}})
+    param = Param(params={"collection_a": {"a": 0.0, "b": 1.0}, "collection_b": {"b": 2.0}})
     new_param = param.replace_param(collection="collection_a", b=42.0)
     assert new_param.params["collection_a"]["b"] == 42.0
-    new_param = new_param.replace_param(collection="collection_b", c=42.0)
-    assert new_param.params["collection_b"]["c"] == 42.0
+    assert new_param.params["collection_b"]["b"] == 2.0
+    new_param = new_param.replace_param(collection="collection_b", b=42.0)
+    assert new_param.params["collection_b"]["b"] == 42.0
 
     with pytest.raises(ValueError):
         _ = param.replace_param(collection="unknown_collection", b=3.0)
@@ -82,13 +83,14 @@ def test_replace_param():
 
 def test_set_trainable():
     """Test we can change trainable status."""
-    param = Param(params={"collection_a": {"a": 0.0, "b": 1.0}, "collection_b": {"c": 2.0}})
+    param = Param(params={"collection_a": {"a": 0.0, "b": 1.0}, "collection_b": {"b": 2.0}})
     assert all(v is True for v in param._trainables["collection_a"].values())
     assert all(v is True for v in param._trainables["collection_b"].values())
 
     param = param.set_trainable("collection_a", a=False, b=False)
     assert all(v is False for v in param._trainables["collection_a"].values())
-    param = param.set_trainable("collection_b", c=False)
+    assert param._trainables["collection_b"]["b"]
+    param = param.set_trainable("collection_b", b=False)
     assert all(v is False for v in param._trainables["collection_b"].values())
 
     with pytest.raises(ValueError):
@@ -97,13 +99,14 @@ def test_set_trainable():
 
 def test_set_bijector():
     """Test we can set bijector."""
-    param = Param(params={"collection_a": {"a": 0.0, "b": 1.0}, "collection_b": {"c": 2.0}})
+    param = Param(params={"collection_a": {"a": 0.0, "b": 1.0}, "collection_b": {"b": 2.0}})
     assert all(isinstance(v, positive) for v in param._bijectors["collection_a"].values())
     assert all(isinstance(v, positive) for v in param._bijectors["collection_b"].values())
 
     param = param.set_bijector("collection_a", a=identity(), b=identity())
     assert all(isinstance(v, identity) for v in param._bijectors["collection_a"].values())
-    param = param.set_bijector("collection_b", c=identity())
+    assert isinstance(param._bijectors["collection_b"]["b"], positive)
+    param = param.set_bijector("collection_b", b=identity())
     assert all(isinstance(v, identity) for v in param._bijectors["collection_b"].values())
 
     with pytest.raises(ValueError):

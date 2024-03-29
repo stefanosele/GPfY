@@ -45,7 +45,9 @@ def test_init_create_correct_variables(use_kernel_param, freq, phases, kernel_pa
     sh = SphericalHarmonics(freq, phases)
     param = sh.init(key, input_dim=input_dim, param=kernel_param)
 
-    assert all(f"V_{f}" in param.params["variational"]["inducing_features"] for f in range(freq))
+    assert all(
+        f"V_{f:02d}" in param.params["variational"]["inducing_features"] for f in range(freq)
+    )
 
     # check trainability
     for n, v in enumerate(param._trainables["variational"]["inducing_features"].values()):

@@ -119,13 +119,13 @@ class SphericalHarmonics:
 
             if (num_phase <= self.phase_truncation) and fund_set:
                 V = fund_set(n)
-                Vs[f"V_{n}"] = V
-                trainables[f"V_{n}"] = False
+                Vs[f"V_{n:02d}"] = V
+                trainables[f"V_{n:02d}"] = False
             else:
                 key, subkey = jax.random.split(key)
                 V = jax.random.normal(subkey, (min(self.phase_truncation, num_phase), dim))
-                Vs[f"V_{n}"] = V
-                trainables[f"V_{n}"] = True
+                Vs[f"V_{n:02d}"] = V
+                trainables[f"V_{n:02d}"] = True
 
         # initialise the orthogonal basis with nans to get the structure
         orth_basis = tree_leaves(
