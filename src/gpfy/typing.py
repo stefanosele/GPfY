@@ -14,12 +14,12 @@
 
 from typing import Any, Callable, Dict, MutableMapping, Optional, Sequence, Tuple, Union
 
-import jax
 from jaxtyping import Array, Float
 
 from gpfy.training import TrainState
 
-PRNG = Union[jax.random.PRNGKeyArray, Array]
+# PRNG = Union[jax.random.PRNGKeyArray, Array]
+PRNG = Array
 ActiveDims = Union[slice, Sequence[int]]
 Collection = MutableMapping[str, Any]
 VariableDict = MutableMapping[str, Collection]

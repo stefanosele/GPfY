@@ -57,7 +57,7 @@ print(m_new)
 # %%
 data = DatasetUCI("yacht")
 data_dict = {"x": data.x, "y": data.y}
-dataset = Dataset.from_dict(data_dict).with_format("jax", dtype=jnp.float64)
+dataset = Dataset.from_dict(data_dict).with_format("np", dtype=jnp.float64)
 dataset = dataset.train_test_split(test_size=0.2)
 
 # %%
@@ -104,8 +104,8 @@ param_new, state, elbos = m_new.fit(param, train_step, optax.adam(5e-2), 2000)
 # Finally, we can predict on some new inputs.
 
 # %%
-pred_mu, pred_var = m_new.predict_diag(param_new, dataset["test"]["x"])
+pred_mu, pred_var = m_new.predict_diag(param_new, dataset["test"]["x"][:])
 
 # %%
-test_y = dataset["test"]["y"]
+test_y = jnp.array(dataset["test"]["y"])
 jnp.sqrt(jnp.mean((test_y - pred_mu) ** 2))

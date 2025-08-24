@@ -108,7 +108,7 @@ def create_training_step(
         def train_step(
             state: TrainState, dummy_input_for_scan: Optional[Array] = None
         ) -> Tuple[TrainState, float]:
-            X, Y = dataset[x_key], dataset[y_key]
+            X, Y = dataset[x_key][:], dataset[y_key][:]
 
             def loss_fn(params):
                 free_param = state.apply_fn(params)

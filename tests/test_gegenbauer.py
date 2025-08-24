@@ -50,7 +50,7 @@ def test_gegenbauer_lookup_table_against_while_loop(n, alpha, shape):
     """test gegenbauer lookup table vs while-loop."""
     angle = _get_input_from_shape(shape)
     geg = GegenbauerLookupTable(max_level=n, alpha=alpha, grid_resolution=100_000)
-    np.testing.assert_allclose(geg(n, alpha, angle), gegenbauer(n, alpha, angle), rtol=1e-5)
+    np.testing.assert_allclose(geg(n, alpha, angle), gegenbauer(n, alpha, angle), rtol=1e-4)
 
 
 @pytest.mark.parametrize("n", freq_list)

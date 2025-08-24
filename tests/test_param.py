@@ -130,11 +130,7 @@ def test_constrained_and_unconstrained():
         "collection_b": {"c": jnp.log(2.0).astype(jnp.float64)},
     }
 
-    jax.tree_util.tree_map(
-        lambda x, y: np.testing.assert_allclose, unconstrained.params, expected_params
-    )
+    jax.tree.map(lambda x, y: np.testing.assert_allclose, unconstrained.params, expected_params)
 
     constrained = unconstrained.constrained()
-    jax.tree_util.tree_map(
-        lambda x, y: np.testing.assert_allclose, constrained.params, param.params
-    )
+    jax.tree.map(lambda x, y: np.testing.assert_allclose, constrained.params, param.params)

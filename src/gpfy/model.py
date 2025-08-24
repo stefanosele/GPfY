@@ -285,7 +285,7 @@ class GP:
         param_free = param.unconstrained()
 
         # Get the non-trainable params and set the optimizer to zero_grad
-        frozen = jax.tree_map(lambda x: not (x), param_free._trainables)
+        frozen = jax.tree.map(lambda x: not (x), param_free._trainables)
         tx = optax.chain(optimizer, optax.masked(optax.set_to_zero(), frozen))
 
         # initialise a train state with the free parameters and an `apply_fn` that replaces the

@@ -17,7 +17,6 @@ from typing import Optional
 import jax
 import jax.numpy as jnp
 import tensorflow_probability.substrates.jax as tfp
-from jax.tree_util import tree_leaves, tree_map
 from jaxtyping import Array, Float
 
 from gpfy.param import Param, identity
@@ -77,9 +76,9 @@ class VariationalDistribution:
         Returns:
             The `Param` object with all variables.
         """
-        inducing_features = tree_leaves(param.params.get("variational")) if param else None
+        inducing_features = jax.tree.leaves(param.params.get("variational")) if param else None
         if inducing_features:
-            if num_inducing_features != sum(tree_map(lambda x: x.shape[0], inducing_features)):
+            if num_inducing_features != sum(jax.tree.map(lambda x: x.shape[0], inducing_features)):
                 raise ValueError("`param` object contains different number of inducing features.")
 
         # initialise the collection

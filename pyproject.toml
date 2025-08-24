@@ -7,13 +7,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gpfy"
-version = "0.0.2"
+version = "0.7.0"
 authors = [
     {name = "Stefanos Eleftheriadis", email = "stelefth@gmail.com"},
 ]
 description="Gaussian process with spherical harmonic features in JAX"
 readme = "README.md"
-requires-python = ">=3.8,<=3.11"
+requires-python = ">=3.11,<3.14"
 keywords = ["gaussian process", "spherical harmonics", "jax"]
 license = {text = "Apache-2.0"}
 classifiers = [

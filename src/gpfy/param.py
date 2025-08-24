@@ -14,9 +14,9 @@
 
 from typing import Any, Dict, Union
 
+import jax
 import jax.numpy as jnp
 import tensorflow_probability.substrates.jax as tfp
-from jax.tree_util import tree_map, tree_structure
 
 from gpfy.typing import BijectorDict, ConstantDict, TrainableDict, VariableDict
 from gpfy.utils import PyTreeNode, field
@@ -132,21 +132,23 @@ class Param(PyTreeNode):
 
         # initialise the trainable status to `True` for all unpsecified variables
         trainables = self._trainables
-        if not trainables or (tree_structure(trainables) != tree_structure(self.params)):
-            trainables = tree_map(lambda _: True, self.params)
+        if not trainables or (
+            jax.tree.structure(trainables) != jax.tree.structure(self.params)  # type: ignore
+        ):
+            trainables = jax.tree.map(lambda _: True, self.params)
             trainables = self._tree_update_from_subtree(trainables, self._trainables)
 
         # initialising the bijectors to `positive` for all unpsecified variables
         bijectors = self._bijectors
         if not bijectors or (
-            tree_structure(bijectors, is_leaf=lambda x: isinstance(x, tfp.bijectors.Bijector))
-            != tree_structure(self.params)
+            jax.tree.structure(bijectors, is_leaf=lambda x: isinstance(x, tfp.bijectors.Bijector))
+            != jax.tree.structure(self.params)  # type: ignore
         ):
-            bijectors = tree_map(lambda _: positive(), self.params)
+            bijectors = jax.tree.map(lambda _: positive(), self.params)
             bijectors = self._tree_update_from_subtree(bijectors, self._bijectors)
 
         # make sure all params are Arrays with float64 dtype
-        params = tree_map(lambda x: jnp.array(x, dtype=jnp.float64), self.params)
+        params = jax.tree.map(lambda x: jnp.array(x, dtype=jnp.float64), self.params)
 
         # write back the modified `VariableDict`s
         object.__setattr__(self, "params", params)
@@ -234,7 +236,7 @@ class Param(PyTreeNode):
             The `Param` with the variables at the unconstrained space (the optimisation space).
         """
         # if self._constrained:
-        unconstrained_params = tree_map(lambda p, t: t.inverse(p), self.params, self._bijectors)
+        unconstrained_params = jax.tree.map(lambda p, t: t.inverse(p), self.params, self._bijectors)
         return self.replace(_constrained=False, params=unconstrained_params)
         # else:
         #     return self
@@ -250,7 +252,7 @@ class Param(PyTreeNode):
             The `Param` with the variables at the constrained space (the original space).
         """
         # if not self._constrained:
-        constrained_params = tree_map(lambda p, t: t.forward(p), self.params, self._bijectors)
+        constrained_params = jax.tree.map(lambda p, t: t.forward(p), self.params, self._bijectors)
         return self.replace(_constrained=True, params=constrained_params)
         # else:
         #     return self

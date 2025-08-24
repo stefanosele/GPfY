@@ -17,7 +17,6 @@ from typing import Callable, List, Optional, Tuple
 import jax
 import jax.numpy as jnp
 from jax._src.lax.linalg import triangular_solve
-from jax.tree_util import tree_leaves, tree_map
 from jaxtyping import Array, Float
 from scipy.special import comb
 
@@ -128,8 +127,8 @@ class SphericalHarmonics:
                 trainables[f"V_{n:02d}"] = True
 
         # initialise the orthogonal basis with nans to get the structure
-        orth_basis = tree_leaves(
-            tree_map(lambda x: jnp.nan * jnp.zeros((x.shape[0], x.shape[0]), dtype=x.dtype), Vs)
+        orth_basis = jax.tree.leaves(
+            jax.tree.map(lambda x: jnp.nan * jnp.zeros((x.shape[0], x.shape[0]), dtype=x.dtype), Vs)
         )
 
         # create the collections for the current object.
@@ -185,7 +184,7 @@ class SphericalHarmonics:
 
         # if we don't have any phase_truncation (so no trainable vars), pre-compute and save the
         # orthogonal basis, otherwise keep it with NaNs.
-        if not any(tree_leaves(var_trainables)):
+        if not any(jax.tree.leaves(var_trainables)):
             orth_basis = self.orthogonalise_basis(param)
 
         all_constants[collection] = {"inducing_features": {"orthogonal_basis": orth_basis}}
@@ -204,13 +203,13 @@ class SphericalHarmonics:
         Returns:
             A list containing the fundamental set of points at every frequency.
         """
-        Vs = tree_leaves(param.params["variational"]["inducing_features"])
+        Vs = jax.tree.leaves(param.params["variational"]["inducing_features"])
 
         # the orth_basis is nans if we learn the Vs
         orth_basis = param.constants["variational"]["inducing_features"]["orthogonal_basis"]
 
         def _normalise():
-            return tree_map(
+            return jax.tree.map(
                 lambda v: v / jnp.sqrt(jnp.sum(jnp.square(v), axis=1, keepdims=True)),
                 Vs,
             )
@@ -249,7 +248,7 @@ class SphericalHarmonics:
         Returns:
             A list with the number of phases per frequency.
         """
-        return jax.tree_map(lambda x: x.shape[0], self.Vs(param))
+        return jax.tree.map(lambda x: x.shape[0], self.Vs(param))
 
     def num_inducing(self, param) -> int:
         """
@@ -285,7 +284,7 @@ class SphericalHarmonics:
             L = jnp.linalg.cholesky(B + 1e-16 * jnp.eye(B.shape[0], dtype=B.dtype))
             return L
 
-        Ls = tree_map(_func, self.Vs(param), levels, const)
+        Ls = jax.tree.map(_func, self.Vs(param), levels, const)
         return Ls
 
     def polynomial_expansion(self, param: Param, X: Float[Array, "N D"]) -> Float[Array, "M N"]:
@@ -317,7 +316,7 @@ class SphericalHarmonics:
             harmonic = triangular_solve(L, zonal, left_side=True, lower=True)
             return harmonic
 
-        harmonics = tree_map(_func, self.Vs(param), levels, self.Ls(param))  # , const)
+        harmonics = jax.tree.map(_func, self.Vs(param), levels, self.Ls(param))  # , const)
         return jnp.concatenate(harmonics, axis=0)
 
     def Kuu(self, param: Param, kernel: Spherical) -> Float[Array, " M"]:
@@ -340,7 +339,7 @@ class SphericalHarmonics:
 
         # get the repetition of each eigenvalue, i.e., the harmonic phases in each frequency.
         reps = self.num_phase_in_frequency(param)
-        return jnp.concatenate(jax.tree_util.tree_map(lambda e, r: jnp.ones(r) / e, eigs, reps))
+        return jnp.concatenate(jax.tree.map(lambda e, r: jnp.ones(r) / e, eigs, reps))
 
     def Kuf(self, param: Param, kernel: Spherical, x: Float[Array, "N D"]) -> Float[Array, "M N"]:
         """

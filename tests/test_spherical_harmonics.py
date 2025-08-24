@@ -17,7 +17,6 @@ import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
 import pytest
-from jax.tree_util import tree_leaves, tree_map
 
 from gpfy.spherical_harmonics import SphericalHarmonics, _num_harmonics
 
@@ -57,10 +56,10 @@ def test_init_create_correct_variables(use_kernel_param, freq, phases, kernel_pa
     assert "gegenbauer_lookup_table" in param.constants["sphere"]
 
     orth_basis = param.constants["variational"]["inducing_features"]["orthogonal_basis"]
-    if any(tree_leaves(param._trainables["variational"]["inducing_features"])):
-        assert all(tree_map(lambda b: jnp.isnan(b).all(), orth_basis))
+    if any(jax.tree.leaves(param._trainables["variational"]["inducing_features"])):
+        assert all(jax.tree.map(lambda b: jnp.isnan(b).all(), orth_basis))
     else:
-        assert not any(tree_map(lambda b: jnp.isnan(b).any(), orth_basis))
+        assert not any(jax.tree.map(lambda b: jnp.isnan(b).any(), orth_basis))
 
 
 @pytest.mark.parametrize("freq", freq_list)
@@ -77,7 +76,7 @@ def test_Vs_are_normalised(freq, phases):
     sh = SphericalHarmonics(freq, phases)
     param = sh.init(key, input_dim=input_dim)
     Vs = sh.Vs(param)
-    norms = tree_map(lambda v: jax.vmap(lambda vv: jnp.dot(vv, vv))(v), Vs)
+    norms = jax.tree.map(lambda v: jax.vmap(lambda vv: jnp.dot(vv, vv))(v), Vs)
     np.testing.assert_allclose(jnp.concatenate(norms), 1.0)
 
 
