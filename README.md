@@ -19,7 +19,7 @@ pip install gpfy
 Alternatively, you can install the latest GitHub `develop` version.
 First create a virtual enviroment via conda:
 ```bash
-conda create -n gpfy_env python=3.10.0
+conda create -n gpfy_env python=3.13
 conda activate gpfy_env
 ```
 
