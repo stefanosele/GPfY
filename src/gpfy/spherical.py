@@ -304,9 +304,10 @@ class Spherical:
             return (u * (jnp.pi - jnp.arccos(u)) + jnp.sqrt(1.0 - jnp.square(u))) / jnp.pi
 
         def _second_order():
+            # Cho & Saul (2009), eq. (7): J_2(θ) = 3 sinθ cosθ + (π - θ)(1 + 2cos²θ), divided by J_2(0) = 3π
             return (
                 (1.0 + 2.0 * jnp.square(u)) / 3 * (jnp.pi - jnp.arccos(u))
-                + jnp.sqrt(1.0 - jnp.square(u))
+                + u * jnp.sqrt(1.0 - jnp.square(u))
             ) / jnp.pi
 
         return jax.lax.switch(order, (_zero_order, _first_order, _second_order))

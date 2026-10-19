@@ -203,3 +203,27 @@ def test_K(kernel, order, ard, depth, projection_dim):
     np.testing.assert_allclose(k.K(param, x), k.K(param, x, x))
     np.testing.assert_allclose(k.K(param, x), k.K2(param, x))
     np.testing.assert_allclose(k.K(param, x), k.K2(param, x, x))
+
+
+@pytest.mark.parametrize("order", order_list)
+@pytest.mark.parametrize("depth", [1, 2])
+@pytest.mark.parametrize("input_dim", [3, 4, 5])
+def test_arccosine_eigenvalues_are_nonnegative(order, depth, input_dim):
+    """A positive definite kernel on the sphere has non-negative Funk–Hecke eigenvalues (Schoenberg)."""
+    k = ArcCosine(order=order, ard=True, depth=depth)
+    eigvals = k._compute_eigvals(sphere_dim=input_dim - 1, max_num_eigvals=20)
+    assert jnp.all(eigvals >= -1e-10), eigvals
+
+
+@pytest.mark.parametrize("order", order_list)
+def test_arccosine_shape_function_matches_cho_saul(order):
+    """The shape functions are Cho & Saul's (2009) J_n(θ), normalised so that κ(1) = 1."""
+    k = ArcCosine(order=order, ard=True, depth=1)
+    u = jnp.linspace(-1.0, 1.0, 101, dtype=jnp.float64)[:, None]
+    θ, s, c = jnp.arccos(u), jnp.sqrt(1.0 - u**2), u
+    J = [
+        jnp.pi - θ,
+        s + (jnp.pi - θ) * c,
+        3.0 * s * c + (jnp.pi - θ) * (1.0 + 2.0 * c**2),
+    ][order]
+    np.testing.assert_allclose(k.shape_function(Param(), u), J / J[-1], atol=1e-12)
